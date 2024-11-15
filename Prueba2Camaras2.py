@@ -11,7 +11,7 @@ import torch
 
  
 # Configuración del modelo YOLO
-MODEL_PATH = "best7.pt"
+MODEL_PATH = "ModelosYolo/best7.pt"
 model = YOLO(MODEL_PATH)
 cronometro_activo = False  # Variable para controlar si el cronómetro ya está en ejecución
 # Variables de control
