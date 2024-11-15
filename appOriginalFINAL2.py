@@ -122,7 +122,6 @@ def cronometro():
             print(f"Error inesperado: {e}")
         
         time.sleep(1)
-
 def iniciar_cronometro_una_vez():
     global cronometro_activo
     if not cronometro_activo:
