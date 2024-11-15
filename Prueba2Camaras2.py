@@ -43,8 +43,6 @@ fecha_actual = datetime.datetime.now().strftime("%Y-%m-%d")
 altura_imagen = 480
 
 
- 
- 
 def procesar_frame_camara1(frame, results):
     # Lógica específica para la cámara 1 (cuando la clase es 1)
     annotated_frame = frame.copy()
