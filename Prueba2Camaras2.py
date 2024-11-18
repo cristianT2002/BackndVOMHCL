@@ -377,49 +377,83 @@ def procesar_frame_camaraBloque(frame, results):
  
 
 #---------------------------- Variables para deteccion de personas
+import datetime
+import cv2
+
+# Variables globales
 hora_primera_deteccion_segundos = 0
 hora_sin_detecciones_segundos = 0
-hora_primera_no_deteccion = None  # Cambiamos el nombre de la variable para reflejar su nuevo propósito
 hora_primera_deteccion = None
-detectado_persona = False
 hora_sin_detecciones = None
-detectado_persona_actual = False
-hora_detecciones_persona = 0
+tiempo_deteccion_acumulado = 0
+tiempo_no_deteccion_acumulado = 0
 persona_detectada_actual = False
+deteccion_confirmada = False
+no_deteccion_confirmada = False
+ahora1, ahora2 = None, None
 def procesar_frame_camaraPersonas(frame, results):
-    # Lógica específica para la cámara 2 (cuando la clase es 0)
-    global persona_detectada_actual,  hora_primera_deteccion_segundos, hora_sin_detecciones_segundos
-    global hora_detecciones_persona, hora_primera_deteccion, hora_sin_detecciones, hora_primera_no_deteccion  # Esta variable indicará si hubo detecciones en el frame anterior
+    global hora_primera_deteccion_segundos, hora_sin_detecciones_segundos
+    global hora_primera_deteccion, hora_sin_detecciones, ahora1, ahora2
+    global tiempo_deteccion_acumulado, tiempo_no_deteccion_acumulado
+    global persona_detectada_actual, deteccion_confirmada, no_deteccion_confirmada
+
+    def obtener_segundos_actuales():
+        ahora = datetime.datetime.now()
+        return ahora.hour * 3600 + ahora.minute * 60 + ahora.second
+
+    detectado_persona = False
+    tiempo_actual_segundos = obtener_segundos_actuales()
 
     annotated_frame = frame.copy()
 
-    detectado_persona = False
-
+    # Procesar detecciones
     for result in results:
         for box, conf, cls in zip(result.boxes.xyxy, result.boxes.conf, result.boxes.cls):
             x_min, y_min, x_max, y_max = map(int, box)
-            if cls == 1 and conf >= 0.1:
-
-                if not persona_detectada_actual:
-                    hora_primera_deteccion = datetime.datetime.now().strftime("%H:%M:%S")
-                    ahora = datetime.datetime.now()
-                    hora_primera_deteccion_segundos = (ahora.hour * 3600 + ahora.minute * 60 + ahora.second)
-                    persona_detectada_actual = True   
-
-                    print("hora primera deteccion ", hora_primera_deteccion)              
-                
+            if cls == 1 and conf >= 0.1:  # Detección de persona
+                detectado_persona = True
                 cv2.rectangle(annotated_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-                # print(f"[Cámara 2] Detectado objeto clase 0 en ({x_min}, {y_min})")
 
-    if not detectado_persona and persona_detectada_actual:
-        hora_sin_detecciones = datetime.datetime.now().strftime("%H:%M:%S")
-        ahora2 = datetime.datetime.now()
-        hora_sin_detecciones_segundos = (ahora2.hour * 3600 + ahora2.minute * 60 + ahora2.second)
-        persona_detectada_actual = False 
-        print("hora sin detecciones", hora_sin_detecciones)
+    if detectado_persona:
+        if not persona_detectada_actual:  # Primera detección en este ciclo
+            hora_primera_deteccion = datetime.datetime.now().strftime("%H:%M:%S")
+            hora_primera_deteccion_segundos = tiempo_actual_segundos
+            persona_detectada_actual = True
+
+        tiempo_deteccion_acumulado += tiempo_actual_segundos - hora_primera_deteccion_segundos
+        hora_primera_deteccion_segundos = tiempo_actual_segundos
+        tiempo_no_deteccion_acumulado = 0
+
+        # Confirmar detección si se acumulan al menos 10 segundos
+        if tiempo_deteccion_acumulado >= 3 and not deteccion_confirmada:
+            deteccion_confirmada = True
+            no_deteccion_confirmada = False
+            ahora1 = datetime.datetime.now().strftime("%H:%M:%S")
+            hora_primera_deteccion_segundos = obtener_segundos_actuales()
+
+            print("Detección confirmada a las:", ahora1)
+            print("En segundos Detección:", hora_primera_deteccion_segundos)
+
+    else:
+        if persona_detectada_actual:  # Primera no detección en este ciclo
+            hora_sin_detecciones = datetime.datetime.now().strftime("%H:%M:%S")
+            hora_sin_detecciones_segundos = tiempo_actual_segundos
+            persona_detectada_actual = False
+
+        tiempo_no_deteccion_acumulado += tiempo_actual_segundos - hora_sin_detecciones_segundos
+        hora_sin_detecciones_segundos = tiempo_actual_segundos
+        tiempo_deteccion_acumulado = 0
+
+        # Confirmar no detección si se acumulan al menos 10 segundos
+        if tiempo_no_deteccion_acumulado >= 5 and not no_deteccion_confirmada:
+            no_deteccion_confirmada = True
+            deteccion_confirmada = False
+            ahora2 = datetime.datetime.now().strftime("%H:%M:%S")
+            hora_sin_detecciones_segundos = obtener_segundos_actuales()
+            print("No detección confirmada a las:", ahora2)
+            print("En segundos No detección:", hora_sin_detecciones_segundos)
 
     return annotated_frame
- 
 
 # ---------------------------- Funciones para obtener variables de Base de Datos --------------------
 # -------------- Variable para almacenar los tiempos de comida
@@ -430,7 +464,7 @@ target_time_1_segundos = 0
 target_time_2_segundos = 0
 
 def logica_deteccion_personas():
-    global detectado_persona, hora_primera_deteccion, hora_sin_detecciones, banderaFull
+    global  hora_primera_deteccion, hora_sin_detecciones, banderaFull, ahora2, ahora1
     while True:
         while banderaFull == "start_ARBOLITO_HCL":
             
@@ -440,8 +474,8 @@ def logica_deteccion_personas():
             alimentacion()
             print("")
             print("")
-            print("primera detección: ", hora_primera_deteccion)
-            print("Tarjet sin detecciones: ", hora_sin_detecciones)
+            print("Tarjet sin detecciones: ", ahora1)
+            print("Hora primera deteccion", ahora2)
             # funcion_guardar_datos()
 
             time.sleep(1)
@@ -561,8 +595,10 @@ def alimentacion():
         print("")
         print("")
         print("")
-
-
+def otros_npt():
+    print("primera detección: ", hora_primera_deteccion)
+def tormenta_npt():
+    print("")
 
 if __name__ == "__main__":
     url2 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
