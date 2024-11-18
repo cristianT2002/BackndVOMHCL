@@ -8,6 +8,8 @@ import os
 from ultralytics import YOLO
 from hikvisionapi import Client
 import pymysql
+from bs4 import BeautifulSoup
+import requests
 
 # Configuración del modelo YOLO
 MODEL_PATH = "ModelosYolo/best7.pt"
@@ -41,6 +43,36 @@ velocidad_bloque = 0
 fecha_actual = datetime.datetime.now().strftime("%Y-%m-%d")
 altura_imagen = 480
 
+
+# ---------------------------- Función para NPT POR TORMENTA --------------------
+def npt_alerta():
+    global alerta, ipcam2, url
+    while True:
+        url = 'http://consultas.axuretechnologies.com:8081/axure/niveles-total/' + ipcam2
+ 
+        # Realizar una petición GET a la URL
+        respuesta = requests.get(url)
+       
+        html_content = respuesta.text
+ 
+        # Reemplazar etiquetas <BR> y <LF> por espacios y saltos de línea
+        html_content = html_content.replace('<BR>', ' ').replace('<LF>', '\n')
+ 
+        # Analizar el contenido HTML modificado con BeautifulSoup
+        soup = BeautifulSoup(html_content, 'html.parser')
+ 
+        # Obtener todos los strings de texto, ahora sin etiquetas <BR> y <LF>
+        texto_deseado = ' '.join(soup.stripped_strings)
+ 
+        array_variables  =  texto_deseado.split()
+
+        alerta = array_variables[3]
+        
+        # print("Alerta: ", alerta)
+  
+        time.sleep(1)
+
+# ---------------------------- Funciones para almacenar variables ---------------
 
 def almacenar_variables_pos(fecha, hora_inicio_videoO, posicion_bloque):
     try:
@@ -87,6 +119,8 @@ def almacenar_variables_vel(vel, hora_inicio_videoO, fecha):
     except Exception as e:
         print(f"Error inesperado: {e}")
 
+# --------------------------------------------------------------------------------
+
 def velocidad():
     global yc_invertido, Metros, max_yc_invertido, tiempo_prom, velocidad_bloque, min_yc_invertido
     # Definir valor inicial de yc_anterior1_invertido
@@ -105,7 +139,7 @@ def velocidad():
         yc_anterior1_invertido = yc_invertido
         # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
         time.sleep(tiempo_prom)
-#Función de cronometro con metadata
+#----------------------------Función de cronometro con metadata
 def cronometro():
     global hora
     while True:
@@ -122,6 +156,7 @@ def cronometro():
             print(f"Error inesperado: {e}")
         
         time.sleep(1)
+
 def iniciar_cronometro_una_vez():
     global cronometro_activo
     if not cronometro_activo:
@@ -260,7 +295,6 @@ def funcion_guardar_datos():
         almacenar_variables_vel(velocidad_bloque, hora, fecha_actual)
         # print("Velocidad del bloque", velocidad_bloque)
         time.sleep(4)
-    
 
 # URL de la cámara IP
 url = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
