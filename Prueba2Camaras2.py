@@ -66,10 +66,6 @@ alertaSim = ''
 banderaFull = ''
 
 
-
-
-
-
 def grabar_camara(url, duracion_segmento, nombre_segmento, modelo, procesar_frame_func):
     print(f"Iniciando grabación de cámara IP desde {url}...")
 
@@ -217,28 +213,38 @@ def actualizar_variables_desde_bd():
 # ---------------------------- Función para NPT POR TORMENTA --------------------
 def npt_alerta():
     global alerta, ipcam2, url
+    
     while True:
-        url = 'http://consultas.axuretechnologies.com:8081/axure/niveles-total/' + "SAT0331"
- 
-        # Realizar una petición GET a la URL
-        respuesta = requests.get(url)
-       
-        html_content = respuesta.text
- 
-        # Reemplazar etiquetas <BR> y <LF> por espacios y saltos de línea
-        html_content = html_content.replace('<BR>', ' ').replace('<LF>', '\n')
- 
-        # Analizar el contenido HTML modificado con BeautifulSoup
-        soup = BeautifulSoup(html_content, 'html.parser')
- 
-        # Obtener todos los strings de texto, ahora sin etiquetas <BR> y <LF>
-        texto_deseado = ' '.join(soup.stripped_strings)
- 
-        array_variables  =  texto_deseado.split()
 
-        alerta = array_variables[3]
+        try:
+            url = 'http://consultas.axuretechnologies.com:8081/axure/niveles-total/' + "SAT0331"
+    
+            # Realizar una petición GET a la URL
+            respuesta = requests.get(url)
         
-  
+            html_content = respuesta.text
+    
+            # Reemplazar etiquetas <BR> y <LF> por espacios y saltos de línea
+            html_content = html_content.replace('<BR>', ' ').replace('<LF>', '\n')
+    
+            # Analizar el contenido HTML modificado con BeautifulSoup
+            soup = BeautifulSoup(html_content, 'html.parser')
+    
+            # Obtener todos los strings de texto, ahora sin etiquetas <BR> y <LF>
+            texto_deseado = ' '.join(soup.stripped_strings)
+    
+            array_variables  =  texto_deseado.split()
+
+            alerta = array_variables[3]
+
+            print("Alerta: ", alerta)   
+
+        except Exception as e:
+            print(f"Error inesperado: {e}")
+            print("Reintentando...")
+            time.sleep(5)
+            continue
+        
         time.sleep(1)
 
 # ---------------------------- Funciones para almacenar variables ---------------
@@ -280,6 +286,28 @@ def almacenar_variables_vel(vel, hora_inicio_videoO, fecha):
                 """
                 # Ejecutar la consulta con las variables proporcionadas
                 cursor.execute(sql_insert, (vel, hora_inicio_videoO, fecha))
+                conexion.commit()
+    
+    except pymysql.MySQLError as e:
+        print(f"Error al almacenar los datos en la BD: {e.args[1]}")
+    except Exception as e:
+        print(f"Error inesperado: {e}")
+def almacenar_variables_PERSONAS_bd(fecha, hora_inicio, tiempo_conexion, tiempo_desconexion=0, npt_tormenta=0, alimentacion=0, paradas_cortas=0, direccion_ip='', bandera='', nombrepozo=''):
+    try:
+        # Establecer conexión a la base de datos
+        with pymysql.connect(host=DB_HOST,
+                             user=DB_USER,
+                             password=DB_PASSWORD,
+                             database=DB_DATABASE) as conexion:
+
+            with conexion.cursor() as cursor:
+                # Ajustar la consulta SQL con los nombres de columnas correctos
+                sql_insert = """
+                INSERT INTO TPCgeneral (Fecha, Hora_Inicio, Tiempo_conexion, Tiempo_desconexion, NPT_tormenta, Alimentacion, Paradas_cortas, Otros_NPT, bandera, nombrePozoGeneral)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """
+                # Ejecutar la consulta con las variables proporcionadas
+                cursor.execute(sql_insert, (fecha, hora_inicio, tiempo_conexion, tiempo_desconexion, npt_tormenta, alimentacion, paradas_cortas, direccion_ip, bandera, nombrepozo))
                 conexion.commit()
     
     except pymysql.MySQLError as e:
@@ -391,11 +419,13 @@ persona_detectada_actual = False
 deteccion_confirmada = False
 no_deteccion_confirmada = False
 ahora1, ahora2 = None, None
+detectado_persona = None
+
 def procesar_frame_camaraPersonas(frame, results):
     global hora_primera_deteccion_segundos, hora_sin_detecciones_segundos
     global hora_primera_deteccion, hora_sin_detecciones, ahora1, ahora2
     global tiempo_deteccion_acumulado, tiempo_no_deteccion_acumulado
-    global persona_detectada_actual, deteccion_confirmada, no_deteccion_confirmada
+    global persona_detectada_actual, deteccion_confirmada, no_deteccion_confirmada, detectado_persona
 
     def obtener_segundos_actuales():
         ahora = datetime.datetime.now()
@@ -465,14 +495,27 @@ target_time_2_segundos = 0
 
 def logica_deteccion_personas():
     global  hora_primera_deteccion, hora_sin_detecciones, banderaFull, ahora2, ahora1
+    global duracionAlertaTotalBD, ultimo_contador_alerta, contador_alerta
     while True:
         while banderaFull == "start_ARBOLITO_HCL":
             
             if banderaFull == 'stop_TOQUI_HCL':
                 break   
 
-            alimentacion()
-            print("")
+
+            # if contador_alerta > ultimo_contador_alerta:
+
+            #     if duracionAlertaTotalBD <= 0.5:
+            #         contador_alerta -= 1
+            #         print("Contador alerta antes del else: ", contador_alerta)
+            #     else:
+            #         almacenar_variables_PERSONAS_bd(fecha_inicio_alerta, hora_inicio_alerta, 0, 0, duracionAlertaTotalBD, 0, 0, 0, 'tormenta', nombrepozo)
+            #         ultimo_contador_alerta = contador_alerta  # Actualiza el último valor del contador
+
+
+            # alimentacion()
+            tormenta_npt()
+
             print("")
             print("Tarjet sin detecciones: ", ahora1)
             print("Hora primera deteccion", ahora2)
@@ -597,8 +640,54 @@ def alimentacion():
         print("")
 def otros_npt():
     print("primera detección: ", hora_primera_deteccion)
+
+#Variables para Tormenta
+tiempos_alerta = []
+timer_alerta = False
+contador_alerta = 0
+hora_inicio_alerta = None
+fecha_inicio_alerta = None
+duracionAlertaTotalBD = 0
+tiempo_inicial_alerta = None
+mensaje_emitido_alerta = None
+duracionAlertaTotalBD = 0
+duracionAlertaTotal_en_minutos = 0
+
 def tormenta_npt():
-    print("")
+    global tiempos_alerta, timer_alerta, contador_alerta, hora_inicio_alerta, fecha_inicio_alerta, duracionAlertaTotalBD, detectado_persona, tiempo_inicial_alerta
+    global mensaje_emitido_alerta, duracionAlertaTotal_en_minutos, duracionAlertaTotalBD
+    if alerta == "1**" or alerta == "2**":
+        if not timer_alerta:
+            tiempo_inicial_alerta = time.time()
+            # hora_inicio_alerta = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(tiempo_inicial_alerta))
+            hora_inicio_alerta = datetime.datetime.now().strftime("%H:%M:%S")
+            fecha_inicio_alerta = time.strftime('%Y-%m-%d', time.localtime(tiempo_inicial_alerta))
+            timer_alerta = True
+            mensaje_emitido_alerta = False  # Flag para controlar la emisión del mensaje a los 30 segundos
+
+    # Revisar si el timer de alerta está activo y si han pasado 30 segundos
+    if timer_alerta:
+        duracionAlerta = time.time() - tiempo_inicial_alerta
+        if duracionAlerta >= 30 and not mensaje_emitido_alerta and detectado_persona:
+            print("Se detectaron personas a los 30 segundos!")
+            mensaje_emitido_alerta = True
+
+    # Lógica para cuando la alerta o alimentación terminan
+    if (alerta != "1**" and alerta != "2**") and timer_alerta:
+        tiempo_final_alerta = time.time()
+        duracionAlertaTotal = tiempo_final_alerta - tiempo_inicial_alerta
+        duracionAlertaTotal_en_minutos = duracionAlertaTotal / 60  # Convertir la duración a minutos
+        duracionAlertaTotalBD = float("{:.2f}".format(duracionAlertaTotal_en_minutos))  # Formato como minutos con dos decimales
+        tiempos_alerta.append(duracionAlertaTotalBD)
+        contador_alerta += 1
+        hora_fin_alerta = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(tiempo_final_alerta))
+        fecha_fin_alerta = time.strftime('%Y-%m-%d', time.localtime(tiempo_final_alerta))
+        print(f"Alerta {contador_alerta}: Duración = {duracionAlertaTotalBD} minutos, Fin = {hora_fin_alerta} ({fecha_fin_alerta})")
+        timer_alerta = False
+        
+
+def parada_corta():
+    print("Tarjet sin detecciones: ", hora_sin_detecciones)
 
 if __name__ == "__main__":
     url2 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
