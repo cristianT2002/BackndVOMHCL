@@ -19,6 +19,7 @@ while True:
         break
 
     # Voltear la imagen horizontalmente para una experiencia espejo
+    frame = cv2.flip(frame, 1)
     h, w, _ = frame.shape
 
     # Convertir a RGB para Mediapipe

@@ -146,7 +146,7 @@ if __name__ == "__main__":
     proceso_grabacion2 = multiprocessing.Process(
         target=grabar_camara, args=(url2, 120, "video_segmento2", model, procesar_frame_camara2)
     )
- 
+     
     proceso_grabacion1.start()
     proceso_grabacion2.start()
  

@@ -33,7 +33,6 @@ DB_DATABASE = 'Hocol'
  
 cam = Client('http://172.30.37.241', 'admin', '4xUR3_2017')
 
-isTiempos = True
 
 # ------------------------ Variables para YC posición y velocidad ----------------
 yc = 0
@@ -113,76 +112,6 @@ tiempos_paradas_cortas = []
 contador_otros_npt = 0 
 tiempos_otros_npt = []
 
-
-def grabar_camara(url, duracion_segmento, nombre_segmento, modelo, procesar_frame_func):
-    print(f"Iniciando grabación de cámara IP desde {url}...")
-
-    while True:
-        try:
-            cap = cv2.VideoCapture(url)
-            if not cap.isOpened():
-                print(f"Error: No se pudo abrir el stream de la cámara IP {url}. Reintentando en 5 segundos...")
-                time.sleep(5)
-                continue
- 
-            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-            fps = int(cap.get(cv2.CAP_PROP_FPS)) or 30
-            frames_por_segmento = fps * duracion_segmento
- 
-            contador_segmento = 1
-            contador_frames = 0
-            nombre_archivo = f"{nombre_segmento}_{contador_segmento}.mp4"
-            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-            # out = cv2.VideoWriter(nombre_archivo, fourcc, fps, (width, height))
-            start_time = time.time()
- 
-            while True:
-                ret, frame = cap.read()
-                if not ret:
-                    print("Advertencia: No se pudo capturar el frame de la cámara IP. Reintentando...")
-                    # out.release()
-                    time.sleep(1)
-                    cap = cv2.VideoCapture(url)
-                    if not cap.isOpened():
-                        print("Error: No se pudo reconectar al stream de la cámara IP. Reintentando en 5 segundos...")
-                        time.sleep(5)
-                    continue
- 
-                results = modelo.predict(frame, imgsz=640, verbose=False)
-                frame = procesar_frame_func(frame, results)
- 
-                cv2.imshow(f"Cámara IP {url}", frame)
-                contador_frames += 1
- 
-                tiempo_esperado = start_time + (contador_frames / fps)
-                tiempo_actual = time.time()
-                if tiempo_actual < tiempo_esperado:
-                    time.sleep(tiempo_esperado - tiempo_actual)
- 
-                if contador_frames >= frames_por_segmento:
-                    # out.release()
-                    # print(f"Guardado {nombre_archivo}")
-                    contador_segmento += 1
-                    contador_frames = 0
-                    nombre_archivo = f"{nombre_segmento}_{contador_segmento}.mp4"
-                    # out = cv2.VideoWriter(nombre_archivo, fourcc, fps, (width, height))
-                    start_time = time.time()
- 
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    raise KeyboardInterrupt
- 
-        except KeyboardInterrupt:
-            print(f"Interrupción manual detectada en cámara {url}.")
-            break
-        except Exception as e:
-            print(f"Error inesperado en la grabación de {url}: {e}. Reintentando en 5 segundos...")
-            time.sleep(5)
-        finally:
-            if 'cap' in locals() and cap.isOpened():
-                cap.release()
-            cv2.destroyAllWindows()
- 
 def obtener_bandera_full_services():
     global banderaFull
     while True:
@@ -420,8 +349,77 @@ def iniciar_cronometro_una_vez():
 
 
 # ---------------------------- Procesamiento de frames
-def procesar_frame_camaraBloque(frame, results):
-    # Lógica específica para la cámara 1 (cuando la clase es 1)
+
+def grabar_camara(url, duracion_segmento, nombre_segmento, modelo, procesar_frame_func, hora_primera_deteccion_segundos, hora_sin_detecciones_segundos):
+    print(f"Iniciando grabación de cámara IP desde {url}...")
+
+    while True:
+        try:
+            cap = cv2.VideoCapture(url)
+            if not cap.isOpened():
+                print(f"Error: No se pudo abrir el stream de la cámara IP {url}. Reintentando en 5 segundos...")
+                time.sleep(5)
+                continue
+ 
+            width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+            height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+            fps = int(cap.get(cv2.CAP_PROP_FPS)) or 30
+            frames_por_segmento = fps * duracion_segmento
+ 
+            contador_segmento = 1
+            contador_frames = 0
+            nombre_archivo = f"{nombre_segmento}_{contador_segmento}.mp4"
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            # out = cv2.VideoWriter(nombre_archivo, fourcc, fps, (width, height))
+            start_time = time.time()
+ 
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    print("Advertencia: No se pudo capturar el frame de la cámara IP. Reintentando...")
+                    # out.release()
+                    time.sleep(1)
+                    cap = cv2.VideoCapture(url)
+                    if not cap.isOpened():
+                        print("Error: No se pudo reconectar al stream de la cámara IP. Reintentando en 5 segundos...")
+                        time.sleep(5)
+                    continue
+ 
+                results = modelo.predict(frame, imgsz=640, verbose=False)
+                frame = procesar_frame_func(frame, results, hora_primera_deteccion_segundos, hora_sin_detecciones_segundos)
+ 
+                cv2.imshow(f"Cámara IP {url}", frame)
+                contador_frames += 1
+ 
+                tiempo_esperado = start_time + (contador_frames / fps)
+                tiempo_actual = time.time()
+                if tiempo_actual < tiempo_esperado:
+                    time.sleep(tiempo_esperado - tiempo_actual)
+ 
+                if contador_frames >= frames_por_segmento:
+                    # out.release()
+                    # print(f"Guardado {nombre_archivo}")
+                    contador_segmento += 1
+                    contador_frames = 0
+                    nombre_archivo = f"{nombre_segmento}_{contador_segmento}.mp4"
+                    # out = cv2.VideoWriter(nombre_archivo, fourcc, fps, (width, height))
+                    start_time = time.time()
+ 
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    raise KeyboardInterrupt
+ 
+        except KeyboardInterrupt:
+            print(f"Interrupción manual detectada en cámara {url}.")
+            break
+        except Exception as e:
+            print(f"Error inesperado en la grabación de {url}: {e}. Reintentando en 5 segundos...")
+            time.sleep(5)
+        finally:
+            if 'cap' in locals() and cap.isOpened():
+                cap.release()
+            cv2.destroyAllWindows()
+ 
+def procesar_frame_camaraBloque(frame, results, hora_primera_deteccion_segundos, hora_sin_detecciones_segundos):
     global segmentos, hora_inicio, altura_imagen, yc, yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido 
     max_y_min = 0  # Variable para mantener el máximo y_min observado
     min_y_min = float('inf')  # Inicialmente establecido en infinito
@@ -455,10 +453,8 @@ def procesar_frame_camaraBloque(frame, results):
     return annotated_frame
  
 
-#---------------------------- Variables para deteccion de personas
+#---------------------------- primeros cambios
 
-# ahora1 = 0
-# ahora2 = 0
 # def procesar_frame_camaraPersonas(frame, results):
 #     global hora_primera_deteccion_segundos, hora_sin_detecciones_segundos
 #     global hora_primera_deteccion, hora_sin_detecciones, ahora1, ahora2
@@ -522,7 +518,7 @@ def procesar_frame_camaraBloque(frame, results):
 #             print("En segundos No detección:", hora_sin_detecciones_segundos)
 
 #     return annotated_frame
-# # ---------------------------- Funciones para obtener variables de Base de Datos --------------------
+# # # ---------------------------- Funciones para obtener variables de Base de Datos --------------------
 # def logica_deteccion_personas():
 #     global  hora_primera_deteccion, hora_sin_detecciones, banderaFull
 #     global duracionAlertaTotalBD, ultimo_contador_alerta, contador_alerta, ahora1, ahora2
@@ -558,7 +554,6 @@ def procesar_frame_camaraBloque(frame, results):
 
 #             time.sleep(1)
     
-
 # Variables globales
 ahora1 = 0
 ahora2 = 0
@@ -567,11 +562,14 @@ ahora2 = 0
 lock = threading.Lock()
 
 
-def procesar_frame_camaraPersonas(frame, results):
-    global hora_primera_deteccion_segundos, hora_sin_detecciones_segundos
-    global hora_primera_deteccion, hora_sin_detecciones, ahora1, ahora2
+###------------------------------ ÚLTIMOS CAMBIOS --------------------------------------
+
+def procesar_frame_camaraPersonas(frame, results, hora_primera_deteccion_segundos, hora_sin_detecciones_segundos):
+    global ahora1, ahora2
     global tiempo_deteccion_acumulado, tiempo_no_deteccion_acumulado
     global persona_detectada_actual, deteccion_confirmada, no_deteccion_confirmada
+    global hora_sin_detecciones_almacenado
+
 
     def obtener_segundos_actuales():
         ahora = datetime.datetime.now()
@@ -581,6 +579,8 @@ def procesar_frame_camaraPersonas(frame, results):
     tiempo_actual_segundos = obtener_segundos_actuales()
 
     annotated_frame = frame.copy()
+    # print("Hora primera detección confirmada en segundos sostenido:", hora_primera_deteccion_segundos.value)
+    print("Hora sin detección confirmada segundos sostenido:", hora_sin_detecciones_almacenado)
 
     # Procesar detecciones
     for result in results:
@@ -593,12 +593,11 @@ def procesar_frame_camaraPersonas(frame, results):
     with lock:
         if detectado_persona:
             if not persona_detectada_actual:  # Primera detección en este ciclo
-                hora_primera_deteccion = datetime.datetime.now().strftime("%H:%M:%S")
-                hora_primera_deteccion_segundos = tiempo_actual_segundos
+                hora_primera_deteccion_segundos.value = tiempo_actual_segundos
                 persona_detectada_actual = True
 
-            tiempo_deteccion_acumulado += tiempo_actual_segundos - hora_primera_deteccion_segundos
-            hora_primera_deteccion_segundos = tiempo_actual_segundos
+            tiempo_deteccion_acumulado += tiempo_actual_segundos - hora_primera_deteccion_segundos.value
+            hora_primera_deteccion_segundos.value = tiempo_actual_segundos
             tiempo_no_deteccion_acumulado = 0
 
             # Confirmar detección si se acumulan al menos 3 segundos
@@ -606,16 +605,16 @@ def procesar_frame_camaraPersonas(frame, results):
                 deteccion_confirmada = True
                 no_deteccion_confirmada = False
                 ahora1 = datetime.datetime.now().strftime("%H:%M:%S")
-                print("Detección confirmada a las:", ahora1)
+                # print("Detección confirmada a las:", ahora1)
+                print("Hora primera detección confirmada en segundos:", hora_primera_deteccion_segundos.value)
 
         else:
             if persona_detectada_actual:  # Primera no detección en este ciclo
-                hora_sin_detecciones = datetime.datetime.now().strftime("%H:%M:%S")
-                hora_sin_detecciones_segundos = tiempo_actual_segundos
+                hora_sin_detecciones_segundos.value = tiempo_actual_segundos
                 persona_detectada_actual = False
 
-            tiempo_no_deteccion_acumulado += tiempo_actual_segundos - hora_sin_detecciones_segundos
-            hora_sin_detecciones_segundos = tiempo_actual_segundos
+            tiempo_no_deteccion_acumulado += tiempo_actual_segundos - hora_sin_detecciones_segundos.value
+            hora_sin_detecciones_segundos.value = tiempo_actual_segundos
             tiempo_deteccion_acumulado = 0
 
             # Confirmar no detección si se acumulan al menos 5 segundos
@@ -623,29 +622,33 @@ def procesar_frame_camaraPersonas(frame, results):
                 no_deteccion_confirmada = True
                 deteccion_confirmada = False
                 ahora2 = datetime.datetime.now().strftime("%H:%M:%S")
-                print("No detección confirmada a las:", ahora2)
+                # print("No detección confirmada a las:", ahora2)
+                print("Hora sin detección confirmada segundos:", hora_sin_detecciones_segundos.value)
+                hora_sin_detecciones_almacenado = hora_sin_detecciones_segundos.value
 
-    return annotated_frame
+    return annotated_frame, hora_sin_detecciones_almacenado
 
 
-def logica_deteccion_personas():
-    global ahora1, ahora2, banderaFull
+
+def logica_deteccion_personas(hora_primera_deteccion_segundos, hora_sin_detecciones_segundos):
+    global banderaFull
 
     while True:
         with lock:
-            print("Tarjet sin detecciones:", ahora1)
-            print("Hora primera detección:", ahora2)
+            print("Hora sin detecciones:", hora_sin_detecciones_segundos.value)
+            print("Hora primera detección:", hora_primera_deteccion_segundos.value)
+            print("almacenado:", hora_sin_detecciones_almacenado.value)
 
-        # Simula la lógica principal
+            # alimentacion(hora_primera_deteccion_segundos, hora_sin_detecciones_segundos)
+
         if banderaFull == "stop_TOQUI_HCL":
             break
-
-        # Aquí podrías incluir más lógica relacionada
         time.sleep(1)
 
 
 
-def alimentacion():
+def alimentacion(hora_primera_deteccion_segundos, hora_sin_detecciones_segundos):
+
     global tiempos_comida, tiemposComidaFormateado, isTiempos, target_time_1_segundos, target_time_2_segundos
     global target_time_1_segundos_almuerzo, target_time_2_segundos_almuerzo, tiempos_alerta_alimentacion
 
@@ -657,6 +660,10 @@ def alimentacion():
     duracionAlertaTotal_alimentacion = 0 
     duracionAlertaTotal_alimentacion_en_minutos = 0
     timer_alerta_alimentacion = None
+
+    print("Tarjet sin detecciones:", hora_primera_deteccion_segundos.value)
+    print("Hora primera detección:", hora_sin_detecciones_segundos.value)
+    print("bandera isTiempos", isTiempos)
 
     if isTiempos == True:
 # ------------------------------ Formato de desayuno -----------------------------------------
@@ -881,35 +888,42 @@ def time_to_seconds(t):
 
 
 if __name__ == "__main__":
-    url2 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
+    manager = multiprocessing.Manager()
+    hora_primera_deteccion_segundos = manager.Value('i', 0)
+    hora_sin_detecciones_segundos = manager.Value('i', 0)
+
     url1 = "rtsp://admin:4xUR3_2017@172.30.37.231:554/Streaming/Channels/102"
- 
+    url2 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
+
     proceso_grabacion1 = multiprocessing.Process(
-        target=grabar_camara, args=(url1, 120, "video_segmento1", model, procesar_frame_camaraBloque)
+        target=grabar_camara,
+        args=(url1, 120, "video_segmento1", model, procesar_frame_camaraBloque, hora_primera_deteccion_segundos, hora_sin_detecciones_segundos)
     )
     proceso_grabacion2 = multiprocessing.Process(
-        target=grabar_camara, args=(url2, 120, "video_segmento2", model, procesar_frame_camaraPersonas)
-
-    )                                                                                                                                                                           
+        target=grabar_camara,
+        args=(url2, 120, "video_segmento2", model, procesar_frame_camaraPersonas, hora_primera_deteccion_segundos, hora_sin_detecciones_segundos)
+    )                            
 
     # hilo_guardarBD = threading.Thread(target=funcion_guardar_datos)
     # hilo_guardarBD.start()
 
-    hilo_velocidad = threading.Thread(target=velocidad)
-    hilo_velocidad.start()
+    # hilo_velocidad = threading.Thread(target=velocidad)
+    # hilo_velocidad.start()
 
-    hilo_npt_tormenta = threading.Thread(target=npt_alerta)
-    hilo_npt_tormenta.start()
+    # hilo_npt_tormenta = threading.Thread(target=npt_alerta)
+    # hilo_npt_tormenta.start()
 
-    hilo_logica_personas = threading.Thread(target=logica_deteccion_personas)
-    hilo_logica_personas.start()
+    # hilo_logica_personas = threading.Thread(
+    #     target=logica_deteccion_personas, args=(hora_primera_deteccion_segundos, hora_sin_detecciones_segundos)
+    # )
+    # hilo_logica_personas.start()
 
     #Hilos de bases de datos
 
-    hilo_obtener_bandera_full_services = threading.Thread(target=obtener_bandera_full_services)
-    hilo_obtener_bandera_full_services.start()
-    hilo_obtener_variables_desde_bd = threading.Thread(target=actualizar_variables_desde_bd)
-    hilo_obtener_variables_desde_bd.start()
+    # hilo_obtener_bandera_full_services = threading.Thread(target=obtener_bandera_full_services)
+    # hilo_obtener_bandera_full_services.start()
+    # hilo_obtener_variables_desde_bd = threading.Thread(target=actualizar_variables_desde_bd)
+    # hilo_obtener_variables_desde_bd.start()
  
     proceso_grabacion1.start()
     proceso_grabacion2.start()

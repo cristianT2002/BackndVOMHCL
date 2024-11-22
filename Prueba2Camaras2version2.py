@@ -69,7 +69,6 @@ banderaFull = ''
 
 
 
-
 def grabar_camara(url, duracion_segmento, nombre_segmento, modelo, procesar_frame_func):
     print(f"Iniciando grabación de cámara IP desde {url}...")
 
@@ -420,7 +419,6 @@ def procesar_frame_camaraPersonas(frame, results):
 
     return annotated_frame
  
-
 # ---------------------------- Funciones para obtener variables de Base de Datos --------------------
 # -------------- Variable para almacenar los tiempos de comida
 tiempos_comida = ''
