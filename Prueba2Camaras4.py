@@ -122,6 +122,7 @@ def almacenar_variables_vel(vel, hora_inicio_videoO, fecha):
     except Exception as e:
         print(f"Error inesperado: {e}")
 
+
 # --------------------------------------------------------------------------------
 def velocidad():
     global yc_invertido, Metros, max_yc_invertido, tiempo_prom, velocidad_bloque, min_yc_invertido
