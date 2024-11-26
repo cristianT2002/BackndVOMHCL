@@ -314,7 +314,7 @@ def velocidad(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
         else:
             velocidad_bloque = 0
         # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
-        print(f"yc_invertido: {yc_invertido.value}, Metros: {Metros}, max_yc_invertido: {max_yc_invertido}, tiempo_prom: {tiempo_prom}, yc_anterior1_invertido: {yc_anterior1_invertido}, yc_metros: {yc_metros.value}")
+        print(f"yc_invertido: {yc_invertido.value}, Metros: {Metros}, tiempo_prom: {tiempo_prom}, yc_anterior1_invertido: {yc_anterior1_invertido}, yc_metros: {yc_metros.value}")
         print(f"max_yc_invertido: {max_yc_invertido.value}, min_yc_invertido: {min_yc_invertido.value}, velocidad_bloque: {velocidad_bloque}")
 
         # print("Velocidad del bloque:::::: ", round(velocidad_bloque, 2))
