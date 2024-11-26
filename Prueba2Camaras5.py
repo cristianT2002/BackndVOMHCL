@@ -121,13 +121,20 @@ def procesar_frame_camara1(frame, results, hora_primera_deteccion_segundos_almac
                     min_y_min = y_min
 
                 yc_invertido.value = altura_imagen - yc  # Invirtiendo el valor de yc
-                min_yc_invertido.value = altura_imagen - max_y_min  
-                max_yc_invertido.value = altura_imagen - min_y_min 
-    
-                if min_yc_invertido.value is not None and max_yc_invertido.value is not None and max_yc_invertido.value != min_yc_invertido.value:
-                    yc_metros.value = round(((yc_invertido.value - min_yc_invertido.value) * (Metros / (max_yc_invertido.value - min_yc_invertido.value))) ,2)
-                else:
-                    yc_metros.value = 0  # o 
+                # min_yc_invertido.value = altura_imagen - max_y_min  
+                # max_yc_invertido.value = altura_imagen - min_y_min 
+
+                min_yc_invertido.value = 720  
+                max_yc_invertido.value = 420
+
+
+                
+                yc_metros.value = round(((yc_invertido.value - min_yc_invertido.value) * (Metros / (max_yc_invertido.value - min_yc_invertido.value))) ,2)
+
+                # if min_yc_invertido.value is not None and max_yc_invertido.value is not None and max_yc_invertido.value != min_yc_invertido.value:
+                #     yc_metros.value = round(((yc_invertido.value - min_yc_invertido.value) * (Metros / (max_yc_invertido.value - min_yc_invertido.value))) ,2)
+                # else:
+                #     yc_metros.value = 0  # o 
 
                 print("yc_metros", yc_metros.value)
 
@@ -314,13 +321,25 @@ def velocidad(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
         else:
             velocidad_bloque = 0
         # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
-        print(f"yc_invertido: {yc_invertido.value}, Metros: {Metros}, tiempo_prom: {tiempo_prom}, yc_anterior1_invertido: {yc_anterior1_invertido}, yc_metros: {yc_metros.value}")
-        print(f"max_yc_invertido: {max_yc_invertido.value}, min_yc_invertido: {min_yc_invertido.value}, velocidad_bloque: {velocidad_bloque}")
+        print(f"x: {yc_invertido.value}, x: {Metros}, x: {tiempo_prom}, x: {yc_anterior1_invertido}, x: {yc_metros.value}")
+        print(f"x: {max_yc_invertido.value}, x: {min_yc_invertido.value}, x: {velocidad_bloque}")
 
         # print("Velocidad del bloque:::::: ", round(velocidad_bloque, 2))
         yc_anterior1_invertido = yc_invertido.value
         # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
         time.sleep(tiempo_prom)
+
+def velocidad2(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
+    global Metros, tiempo_prom, velocidad_bloque, hora
+    # Definir valor inicial de yc_anterior1_invertido
+    yc_anterior1_invertido = 0
+    while True:
+        # Comprobación de que max_yc_invertido sea mayor que min_yc_invertido
+        # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
+        print("Datos obtenidos Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora, yc_metros.value, velocidad_bloque)
+
+        # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
+        time.sleep(3)
 
 def funcion_guardar_datos(yc_metros, yc_invertido):
     global fecha_actual, hora, velocidad_bloque
@@ -361,8 +380,9 @@ if __name__ == "__main__":
 
     )               
 
-    # hilo_guardarBD = threading.Thread(target=funcion_guardar_datos, args=(yc_metros, yc_invertido))
-    # hilo_guardarBD.start()
+    hilo_velocidad2 = threading.Thread(target=velocidad2, args=(yc_metros, yc_invertido,
+                                                             max_yc_invertido, min_yc_invertido))
+    hilo_velocidad2.start()  
 
     hilo_velocidad = threading.Thread(target=velocidad, args=(yc_metros, yc_invertido,
                                                              max_yc_invertido, min_yc_invertido))
