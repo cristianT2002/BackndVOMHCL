@@ -41,7 +41,7 @@ min_yc_invertido = 0  # Inicialmente no conocido
 hora = None
 hora2 = None
 Metros = 10
-tiempo_prom = 1
+tiempo_prom = 2
 velocidad_bloque = 0    
 fecha_actual = datetime.datetime.now().strftime("%Y-%m-%d")
 altura_imagen = 480
@@ -66,6 +66,28 @@ hora_primera_deteccion_segundos_almacenado = 0
 detectado_persona = None
 ahora1 = 0
 ahora2 = 0
+
+
+# --------------------------------------------------------------------------------
+def velocidad():
+    global yc_invertido, Metros, max_yc_invertido, tiempo_prom, velocidad_bloque, min_yc_invertido
+    # Definir valor inicial de yc_anterior1_invertido
+    yc_anterior1_invertido = 0
+    while True:
+        # Comprobación de que max_yc_invertido sea mayor que min_yc_invertido
+        if max_yc_invertido > 0 and min_yc_invertido is not None and max_yc_invertido != min_yc_invertido:
+            # Calcular la velocidad del bloque solo si tiempo_prom es mayor que cero
+            if tiempo_prom > 0:
+                velocidad_bloque = round(abs(((yc_invertido - yc_anterior1_invertido) * (Metros / (max_yc_invertido - min_yc_invertido))) / tiempo_prom), 2)
+            else:
+                velocidad_bloque = 0
+        else:
+            velocidad_bloque = 0
+        print("Variables utilizadas en la velocidad:", yc_invertido, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido)
+        # print("Velocidad del bloque:::::: ", round(velocidad_bloque, 2))
+        yc_anterior1_invertido = yc_invertido
+        # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
+        time.sleep(tiempo_prom)
 
 #----------------------------Función de cronometro con metadata
 def cronometro():
@@ -280,6 +302,15 @@ def logica_deteccion_personas(hora_primera_deteccion_segundos_almacenado, hora_s
 
             # alimentacion(hora_primera_deteccion_segundos, hora_sin_detecciones_segundos)
         time.sleep(2)
+
+def funcion_guardar_datos():
+    global yc_invertido, fecha_actual, hora, yc_metros, velocidad_bloque
+    while True:
+        # almacenar_variables_pos(fecha_actual, hora, yc_metros)
+        # almacenar_variables_vel(velocidad_bloque, hora, fecha_actual)
+        print("Datos obtenidos", fecha_actual, hora, yc_metros, velocidad_bloque)
+        time.sleep(4)
+
 
 
 if __name__ == "__main__":
