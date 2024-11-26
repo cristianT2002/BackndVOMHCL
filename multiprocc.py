@@ -316,7 +316,7 @@ def velocidad():
                 velocidad_bloque = 0
         else:
             velocidad_bloque = 0
-        # print("Variables utilizadas en la velocidad:", yc_invertido, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido)
+        print("Variables utilizadas en la velocidad:", yc_invertido, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido)
         # print("Velocidad del bloque:::::: ", round(velocidad_bloque, 2))
         yc_anterior1_invertido = yc_invertido
         # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
@@ -455,69 +455,6 @@ def procesar_frame_camaraBloque(frame, results, hora_primera_deteccion_segundos,
 
 #---------------------------- primeros cambios
 
-# def procesar_frame_camaraPersonas(frame, results):
-#     global hora_primera_deteccion_segundos, hora_sin_detecciones_segundos
-#     global hora_primera_deteccion, hora_sin_detecciones, ahora1, ahora2
-#     global tiempo_deteccion_acumulado, tiempo_no_deteccion_acumulado
-#     global persona_detectada_actual, deteccion_confirmada, no_deteccion_confirmada, detectado_persona
-
-#     def obtener_segundos_actuales():
-#         ahora = datetime.datetime.now()
-#         return ahora.hour * 3600 + ahora.minute * 60 + ahora.second
-
-#     detectado_persona = False
-#     tiempo_actual_segundos = obtener_segundos_actuales()
-
-#     annotated_frame = frame.copy()
-
-#     # Procesar detecciones
-#     for result in results:
-#         for box, conf, cls in zip(result.boxes.xyxy, result.boxes.conf, result.boxes.cls):
-#             x_min, y_min, x_max, y_max = map(int, box)
-#             if cls == 1 and conf >= 0.1:  # Detección de persona
-#                 detectado_persona = True
-#                 cv2.rectangle(annotated_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
-
-#     if detectado_persona:
-#         if not persona_detectada_actual:  # Primera detección en este ciclo
-#             hora_primera_deteccion = datetime.datetime.now().strftime("%H:%M:%S")
-#             hora_primera_deteccion_segundos = tiempo_actual_segundos
-#             persona_detectada_actual = True
-
-#         tiempo_deteccion_acumulado += tiempo_actual_segundos - hora_primera_deteccion_segundos
-#         hora_primera_deteccion_segundos = tiempo_actual_segundos
-#         tiempo_no_deteccion_acumulado = 0
-
-#         # Confirmar detección si se acumulan al menos 10 segundos
-#         if tiempo_deteccion_acumulado >= 3 and not deteccion_confirmada:
-#             deteccion_confirmada = True
-#             no_deteccion_confirmada = False
-#             ahora1 = datetime.datetime.now().strftime("%H:%M:%S")
-#             hora_primera_deteccion_segundos = obtener_segundos_actuales()
-
-#             print("Detección confirmada a las:", ahora1)
-#             print("En segundos Detección:", hora_primera_deteccion_segundos)
-
-#     else:
-#         if persona_detectada_actual:  # Primera no detección en este ciclo
-#             hora_sin_detecciones = datetime.datetime.now().strftime("%H:%M:%S")
-#             hora_sin_detecciones_segundos = tiempo_actual_segundos
-#             persona_detectada_actual = False
-
-#         tiempo_no_deteccion_acumulado += tiempo_actual_segundos - hora_sin_detecciones_segundos
-#         hora_sin_detecciones_segundos = tiempo_actual_segundos
-#         tiempo_deteccion_acumulado = 0
-
-#         # Confirmar no detección si se acumulan al menos 10 segundos
-#         if tiempo_no_deteccion_acumulado >= 5 and not no_deteccion_confirmada:
-#             no_deteccion_confirmada = True
-#             deteccion_confirmada = False
-#             ahora2 = datetime.datetime.now().strftime("%H:%M:%S")
-#             hora_sin_detecciones_segundos = obtener_segundos_actuales()
-#             print("No detección confirmada a las:", ahora2)
-#             print("En segundos No detección:", hora_sin_detecciones_segundos)
-
-#     return annotated_frame
 # # # ---------------------------- Funciones para obtener variables de Base de Datos --------------------
 # def logica_deteccion_personas():
 #     global  hora_primera_deteccion, hora_sin_detecciones, banderaFull
@@ -580,7 +517,6 @@ def procesar_frame_camaraPersonas(frame, results, hora_primera_deteccion_segundo
 
     annotated_frame = frame.copy()
     # print("Hora primera detección confirmada en segundos sostenido:", hora_primera_deteccion_segundos.value)
-    print("Hora sin detección confirmada segundos sostenido:", hora_sin_detecciones_almacenado)
 
     # Procesar detecciones
     for result in results:

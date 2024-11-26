@@ -145,6 +145,8 @@ def procesar_frame_camara1(frame, results, hora_primera_deteccion_segundos_almac
                 else:
                     yc_metros = 0  # o 
 
+                print("yc_metros", yc_metros)
+
 
     return annotated_frame
 
@@ -308,7 +310,7 @@ def funcion_guardar_datos():
     while True:
         # almacenar_variables_pos(fecha_actual, hora, yc_metros)
         # almacenar_variables_vel(velocidad_bloque, hora, fecha_actual)
-        print("Datos obtenidos", fecha_actual, hora, yc_metros, velocidad_bloque)
+        print("Datos obtenidos Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora, yc_metros, velocidad_bloque)
         time.sleep(4)
 
 
@@ -318,8 +320,8 @@ if __name__ == "__main__":
     hora_primera_deteccion_segundos_almacenado = manager.Value('i', 0)
     hora_sin_detecciones_segundos_almacenado = manager.Value('i', 0)
 
-    url2 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
-    url1 = "rtsp://admin:4xUR3_2017@172.30.37.231:554/Streaming/Channels/102"
+    url1 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
+    url2 = "rtsp://admin:4xUR3_2017@172.30.37.231:554/Streaming/Channels/102"
  
     proceso_grabacion1 = multiprocessing.Process(
         target=grabar_camara, args=(url1, 120, "video_segmento1", model, procesar_frame_camara1, 
@@ -329,7 +331,13 @@ if __name__ == "__main__":
         target=grabar_camara, args=(url2, 120, "video_segmento2", model, procesar_frame_camara2, 
                                     hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado)
 
-    )                                                                                                                                                                           
+    )               
+
+    hilo_guardarBD = threading.Thread(target=funcion_guardar_datos)
+    hilo_guardarBD.start()
+
+    hilo_velocidad = threading.Thread(target=velocidad)
+    hilo_velocidad.start()                                                                                                                                                            
 
     hilo_logica_personas = threading.Thread(
         target=logica_deteccion_personas, args=(hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado)

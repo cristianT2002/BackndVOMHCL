@@ -41,7 +41,7 @@ min_yc_invertido = 0  # Inicialmente no conocido
 hora = None
 hora2 = None
 Metros = 10
-tiempo_prom = 1
+tiempo_prom = 2
 velocidad_bloque = 0    
 fecha_actual = datetime.datetime.now().strftime("%Y-%m-%d")
 altura_imagen = 480
@@ -67,6 +67,10 @@ detectado_persona = None
 ahora1 = 0
 ahora2 = 0
 
+
+# --------------------------------------------------------------------------------
+
+
 #----------------------------Función de cronometro con metadata
 def cronometro():
     global hora
@@ -90,12 +94,14 @@ def iniciar_cronometro_una_vez():
     if not cronometro_activo:
         cronometro_activo = True
         hilo_cronometro = threading.Thread(target=cronometro)
-        hilo_cronometro.daemon = True  # Para que termine al cerrar el programa
+        hilo_cronometro.daemon = True  # Para que terlmine al cerrar el programa
         hilo_cronometro.start()
 
-def procesar_frame_camara1(frame, results, hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado):
+def procesar_frame_camara1(frame, results, hora_primera_deteccion_segundos_almacenado, 
+                           hora_sin_detecciones_segundos_almacenado, yc_metros, yc_invertido, 
+                           max_yc_invertido, min_yc_invertido):
     # Lógica específica para la cámara 1 (cuando la clase es 1)
-    global segmentos, hora_inicio, altura_imagen, yc, yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido 
+    global segmentos, hora_inicio, altura_imagen, yc 
     max_y_min = 0  # Variable para mantener el máximo y_min observado
     min_y_min = float('inf')  # Inicialmente establecido en infinito
     iniciar_cronometro_una_vez()  # Iniciar el cronómetro antes de comenzar a grabar
@@ -114,19 +120,24 @@ def procesar_frame_camara1(frame, results, hora_primera_deteccion_segundos_almac
 
                     min_y_min = y_min
 
-                yc_invertido = altura_imagen - yc  # Invirtiendo el valor de yc
-                min_yc_invertido = altura_imagen - max_y_min  
-                max_yc_invertido = altura_imagen - min_y_min 
+                yc_invertido.value = altura_imagen - yc  # Invirtiendo el valor de yc
+                min_yc_invertido.value = altura_imagen - max_y_min  
+                max_yc_invertido.value = altura_imagen - min_y_min 
     
-                if min_yc_invertido is not None and max_yc_invertido is not None and max_yc_invertido != min_yc_invertido:
-                    yc_metros = round(((yc_invertido - min_yc_invertido) * (Metros / (max_yc_invertido - min_yc_invertido))) ,2)
+                if min_yc_invertido.value is not None and max_yc_invertido.value is not None and max_yc_invertido.value != min_yc_invertido.value:
+                    yc_metros.value = round(((yc_invertido.value - min_yc_invertido.value) * (Metros / (max_yc_invertido.value - min_yc_invertido.value))) ,2)
                 else:
-                    yc_metros = 0  # o 
+                    yc_metros.value = 0  # o 
+
+                print("yc_metros", yc_metros.value)
 
 
     return annotated_frame
 
-def procesar_frame_camara2(frame, results, hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado):    
+def procesar_frame_camara2(frame, results, hora_primera_deteccion_segundos_almacenado, 
+                           hora_sin_detecciones_segundos_almacenado, 
+                           yc_metros, yc_invertido,
+                           max_yc_invertido, min_yc_invertido):    
     global ahora1, ahora2
     global tiempo_deteccion_acumulado, tiempo_no_deteccion_acumulado
     global persona_detectada_actual, deteccion_confirmada, no_deteccion_confirmada
@@ -199,7 +210,10 @@ def procesar_frame_camara2(frame, results, hora_primera_deteccion_segundos_almac
     return annotated_frame
 
 
-def grabar_camara(url, duracion_segmento, nombre_segmento, modelo, procesar_frame_func, hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado):
+def grabar_camara(url, duracion_segmento, nombre_segmento, modelo, procesar_frame_func, 
+                  hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado, 
+                  yc_metros, yc_invertido,
+                  max_yc_invertido, min_yc_invertido):
     print(f"Iniciando grabación de cámara IP desde {url}...")
 
     while True:
@@ -235,7 +249,10 @@ def grabar_camara(url, duracion_segmento, nombre_segmento, modelo, procesar_fram
                     continue
  
                 results = modelo.predict(frame, imgsz=640, verbose=False)
-                frame = procesar_frame_func(frame, results, hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado)
+                frame = procesar_frame_func(frame, results, 
+                                            hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado,
+                                            yc_metros, yc_invertido,
+                                            max_yc_invertido, min_yc_invertido)
  
                 cv2.imshow(f"Cámara IP {url}", frame)
                 out.write(frame)
@@ -282,26 +299,78 @@ def logica_deteccion_personas(hora_primera_deteccion_segundos_almacenado, hora_s
         time.sleep(2)
 
 
+def velocidad(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
+    global Metros, tiempo_prom, velocidad_bloque
+    # Definir valor inicial de yc_anterior1_invertido
+    yc_anterior1_invertido = 0
+    while True:
+        # Comprobación de que max_yc_invertido sea mayor que min_yc_invertido
+        if max_yc_invertido.value > 0 and min_yc_invertido.value is not None and max_yc_invertido.value != min_yc_invertido.value:
+            # Calcular la velocidad del bloque solo si tiempo_prom es mayor que cero
+            if tiempo_prom > 0:
+                velocidad_bloque = round(abs(((yc_invertido.value - yc_anterior1_invertido) * (Metros / (max_yc_invertido.value - min_yc_invertido.value))) / tiempo_prom), 2)
+            else:
+                velocidad_bloque = 0
+        else:
+            velocidad_bloque = 0
+        # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
+        print(f"yc_invertido: {yc_invertido.value}, Metros: {Metros}, max_yc_invertido: {max_yc_invertido}, tiempo_prom: {tiempo_prom}, yc_anterior1_invertido: {yc_anterior1_invertido}, yc_metros: {yc_metros.value}")
+        print(f"max_yc_invertido: {max_yc_invertido.value}, min_yc_invertido: {min_yc_invertido.value}, velocidad_bloque: {velocidad_bloque}")
+
+        # print("Velocidad del bloque:::::: ", round(velocidad_bloque, 2))
+        yc_anterior1_invertido = yc_invertido.value
+        # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
+        time.sleep(tiempo_prom)
+
+def funcion_guardar_datos(yc_metros, yc_invertido):
+    global fecha_actual, hora, velocidad_bloque
+    while True:
+        with lock:
+        # almacenar_variables_pos(fecha_actual, hora, yc_metros)
+        # almacenar_variables_vel(velocidad_bloque, hora, fecha_actual)
+            print("Datos obtenidos Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora, yc_metros.value, velocidad_bloque)
+        time.sleep(2)
+
+
+
 if __name__ == "__main__":
     manager = multiprocessing.Manager()
     hora_primera_deteccion_segundos_almacenado = manager.Value('i', 0)
     hora_sin_detecciones_segundos_almacenado = manager.Value('i', 0)
+    yc_metros = manager.Value('f', 0.0)
+    yc_invertido = manager.Value('f', 0.0)
+    max_yc_invertido = manager.Value('f', 0.0)
+    min_yc_invertido = manager.Value('f', 0.0)
 
-    url2 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
-    url1 = "rtsp://admin:4xUR3_2017@172.30.37.231:554/Streaming/Channels/102"
+
+    url1 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
+    url2 = "rtsp://admin:4xUR3_2017@172.30.37.231:554/Streaming/Channels/102"
  
     proceso_grabacion1 = multiprocessing.Process(
         target=grabar_camara, args=(url1, 120, "video_segmento1", model, procesar_frame_camara1, 
-                                    hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado)
+                                    hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado, 
+                                    yc_metros, yc_invertido,
+                                    max_yc_invertido, min_yc_invertido)
     )
+
     proceso_grabacion2 = multiprocessing.Process(
         target=grabar_camara, args=(url2, 120, "video_segmento2", model, procesar_frame_camara2, 
-                                    hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado)
+                                    hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado, 
+                                    yc_metros, yc_invertido,
+                                    max_yc_invertido, min_yc_invertido)
 
-    )                                                                                                                                                                           
+    )               
+
+    # hilo_guardarBD = threading.Thread(target=funcion_guardar_datos, args=(yc_metros, yc_invertido))
+    # hilo_guardarBD.start()
+
+    hilo_velocidad = threading.Thread(target=velocidad, args=(yc_metros, yc_invertido,
+                                                             max_yc_invertido, min_yc_invertido))
+    hilo_velocidad.start()                                                                                                                                                            
 
     hilo_logica_personas = threading.Thread(
-        target=logica_deteccion_personas, args=(hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado)
+        target=logica_deteccion_personas, args=(hora_primera_deteccion_segundos_almacenado, 
+                                                hora_sin_detecciones_segundos_almacenado)
     )
     hilo_logica_personas.start() 
 

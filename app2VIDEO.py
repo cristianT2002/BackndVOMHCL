@@ -208,7 +208,7 @@ model_loaded = False
 
 # Ruta del video a procesar 
 # video_path = "mesaprueba11.webm"
-video_path = "Videos/mesaprueba11.webm"
+video_path = "mesaprueba13.webm"
 
 
 # Capturar el video
@@ -275,7 +275,8 @@ def almacenar_variables_en_bd(fecha, hora_inicio_videoO, posicion_bloque):
 #             print("Velocidad no obtenida")
 
 def velocidad():
-    global yc_invertido, Metros, max_yc_invertido, tiempo_prom, velocidad_bloque, min_yc_invertido
+    global yc_invertido, Metros, max_yc_invertido, tiempo_prom, velocidad_bloque
+    global min_yc_invertido
 
     # Definir valor inicial de yc_anterior1_invertido
     yc_anterior1_invertido = 0
@@ -304,8 +305,8 @@ def velocidad():
 # Definimos la función de detección
 def detect_video():
     print("Iniciando detect_video")
-
-    global velocidad_bloque, yc_invertido, max_yc_invertido, min_yc_invertido, yc_anterior, model, yc_invertido, Metros
+    global velocidad_bloque, yc_invertido, max_yc_invertido, min_yc_invertido, yc_anterior 
+    global model, yc_invertido, Metros
 
     print("Iniciando video")
 
@@ -437,6 +438,8 @@ def detect_video():
                         else:
                             # Esperar hasta que los valores se actualicen correctamente
                             valor_metros = 0  # o
+
+                        print("Metros:", valor_metros)
 
                         # print("yc_invertido:", yc_invertido)                        
                         # print("max_yc_invertido:", max_yc_invertido) #--------> POSICIÓN MÁS BAJA DEL BLOQUE invertido
