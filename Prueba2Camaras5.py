@@ -360,6 +360,7 @@ if __name__ == "__main__":
     yc_invertido = manager.Value('f', 0.0)
     max_yc_invertido = manager.Value('f', 0.0)
     min_yc_invertido = manager.Value('f', 0.0)
+    print("h")
 
 
     url1 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
