@@ -69,9 +69,6 @@ ahora2 = 0
 
 # --------------------------------------------------------------------------------
 def cronometro(hora):
-    """
-    Actualiza la variable compartida `hora` con el tiempo actual (sin la zona horaria).
-    """
     while True:
         try:
             # Simula obtener el tiempo desde un sistema remoto
@@ -92,11 +89,8 @@ def cronometro(hora):
 
 #----------------------------Función de cronometro con metadata
 def iniciar_cronometro_una_vez(hora, cronometro_activo):
-    print("antes de cronometro ", cronometro_activo.value)
-    time.sleep(3) 
     if not cronometro_activo.value:
         cronometro_activo.value = True
-        print("Iniciando cronometro", cronometro_activo.value)
         hilo_cronometro = threading.Thread(target=cronometro, args=(hora,))
         hilo_cronometro.daemon = True  # Para que terlmine al cerrar el programa
         hilo_cronometro.start()
@@ -343,25 +337,25 @@ def velocidad(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
         # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
         time.sleep(tiempo_prom)
 
-def velocidad2(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
-    global Metros, tiempo_prom, velocidad_bloque, hora
+def velocidad2(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido, hora):
+    global Metros, tiempo_prom, velocidad_bloque
     # Definir valor inicial de yc_anterior1_invertido
     yc_anterior1_invertido = 0
     while True:
         # Comprobación de que max_yc_invertido sea mayor que min_yc_invertido
         # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
-        print("Datos obtenidos Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora, yc_metros.value, velocidad_bloque)
+        print("Datos obtenidos TTTTT Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora.value, yc_metros.value, velocidad_bloque)
 
         # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
         time.sleep(3)
 
-def funcion_guardar_datos(yc_metros, yc_invertido):
-    global fecha_actual, hora, velocidad_bloque
+def funcion_guardar_datos(yc_metros, yc_invertido, hora):
+    global fecha_actual, velocidad_bloque
     while True:
         with lock:
         # almacenar_variables_pos(fecha_actual, hora, yc_metros)
         # almacenar_variables_vel(velocidad_bloque, hora, fecha_actual)
-            print("Datos obtenidos Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora, yc_metros.value, velocidad_bloque)
+            print("Datos obtenidos Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora.value, yc_metros.value, velocidad_bloque)
         time.sleep(2)
 
 
@@ -399,7 +393,8 @@ if __name__ == "__main__":
                
 
     hilo_velocidad2 = threading.Thread(target=velocidad2, args=(yc_metros, yc_invertido,
-                                                             max_yc_invertido, min_yc_invertido))
+                                                             max_yc_invertido, min_yc_invertido,
+                                                             hora))
     hilo_velocidad2.start()  
 
     hilo_velocidad = threading.Thread(target=velocidad, args=(yc_metros, yc_invertido,
