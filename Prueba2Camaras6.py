@@ -137,7 +137,7 @@ def procesar_frame_camara1(frame, results, hora_primera_deteccion_segundos_almac
                 # else:
                 #     yc_metros.value = 0  # o 
 
-                print("yc_metros", yc_metros.value)
+                # print("yc_metros", yc_metros.value)
 
 
     return annotated_frame
@@ -344,21 +344,12 @@ def velocidad2(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido, hora
     while True:
         # Comprobación de que max_yc_invertido sea mayor que min_yc_invertido
         # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
+        # almacenar_variables_pos(fecha_actual, hora, yc_metros)
+        # almacenar_variables_vel(velocidad_bloque, hora, fecha_actual)
         print("Datos obtenidos TTTTT Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora.value, yc_metros.value, velocidad_bloque)
 
         # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
         time.sleep(3)
-
-def funcion_guardar_datos(yc_metros, yc_invertido, hora):
-    global fecha_actual, velocidad_bloque
-    while True:
-        with lock:
-        # almacenar_variables_pos(fecha_actual, hora, yc_metros)
-        # almacenar_variables_vel(velocidad_bloque, hora, fecha_actual)
-            print("Datos obtenidos Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora.value, yc_metros.value, velocidad_bloque)
-        time.sleep(2)
-
-
 
 if __name__ == "__main__":
     manager = multiprocessing.Manager()
