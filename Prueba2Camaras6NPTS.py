@@ -32,6 +32,20 @@ DB_DATABASE = 'Hocol'
  
 cam = Client('http://172.30.37.241', 'admin', '4xUR3_2017')
 
+
+# ---------------------------- Otras variables
+ipcam =''
+ipcam2 = ''
+probabilidad = 0.0
+probabilidadScore = 0.0
+alerta = ''
+tiempo_control = 0
+banderin_actual = ''
+mesa = ''
+contrapozo = ''
+nombrepozo = ''
+alertaSim = ''
+
 #---------------------------Variables para Tormenta------------------------------------
 tiempos_alerta = []
 timer_alerta = False
@@ -43,6 +57,21 @@ tiempo_inicial_alerta = None
 mensaje_emitido_alerta = None
 duracionAlertaTotalBD = 0
 duracionAlertaTotal_en_minutos = 0 
+
+
+# -------------- Variable para almacenar los tiempos de comida --------------
+tiempos_comida = ''
+tiemposComidaFormateado = {}
+isTiempos = False
+target_time_1_segundos = 0
+target_time_2_segundos = 0
+target_time_1_segundos_almuerzo = 0
+target_time_2_segundos_almuerzo = 0
+tiempos_alerta_alimentacion = []
+contador_alerta_alimentacion = 0
+ultimo_contador_alerta_alimentacion = 0
+tiempos_alerta_alimentacion = []
+
 
 
 # ------------------------ Variables para YC posición y velocidad ----------------
@@ -356,13 +385,32 @@ def grabar_camara(url, duracion_segmento, nombre_segmento, modelo, procesar_fram
  
 
 def logica_deteccion_personas(hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado):
+    global tiempos_alerta, timer_alerta, contador_alerta, hora_inicio_alerta, fecha_inicio_alerta, duracionAlertaTotalBD, detectado_persona, tiempo_inicial_alerta
+    global mensaje_emitido_alerta, duracionAlertaTotal_en_minutos, duracionAlertaTotalBD, alerta
+  
+    ultimo_contador_alerta = 0
 
     while True:
         with lock:
-            print("Hora sin detecciones:", hora_sin_detecciones_segundos_almacenado.value)
-            print("Hora primera detección:", hora_primera_deteccion_segundos_almacenado.value)
+
+            print("ultimo contador alerta: ", ultimo_contador_alerta)
+            print("Contador alerta: ", contador_alerta, fecha_inicio_alerta, hora_inicio_alerta, 0, 0, duracionAlertaTotalBD, 0, 0, 0, 'tormenta', nombrepozo)
+
+            if contador_alerta > ultimo_contador_alerta:
+
+                if duracionAlertaTotalBD <= 0.5:
+                    contador_alerta -= 1
+                    print("Contador alerta antes del else: ", contador_alerta)
+                else:
+                    print("Contador alerta antes despues : ", contador_alerta, fecha_inicio_alerta, hora_inicio_alerta, 0, 0, duracionAlertaTotalBD, 0, 0, 0, 'tormenta', nombrepozo)
+                    ultimo_contador_alerta = contador_alerta  # Actualiza el último valor del contador
+
+
+            # print("Hora sin detecciones:", hora_sin_detecciones_segundos_almacenado.value)
+            # print("Hora primera detección:", hora_primera_deteccion_segundos_almacenado.value)
 
             # alimentacion(hora_primera_deteccion_segundos, hora_sin_detecciones_segundos)
+            tormenta_npt()
         time.sleep(2)
 
 #-------------------- Función para calcular la velocidad
@@ -381,8 +429,8 @@ def velocidad(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
         else:
             velocidad_bloque = 0
         # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
-        print(f"x: {yc_invertido.value}, x: {Metros}, x: {tiempo_prom}, x: {yc_anterior1_invertido}, x: {yc_metros.value}")
-        print(f"x: {max_yc_invertido.value}, x: {min_yc_invertido.value}, x: {velocidad_bloque}")
+        # print(f"x: {yc_invertido.value}, x: {Metros}, x: {tiempo_prom}, x: {yc_anterior1_invertido}, x: {yc_metros.value}")
+        # print(f"x: {max_yc_invertido.value}, x: {min_yc_invertido.value}, x: {velocidad_bloque}")
 
         # print("Velocidad del bloque:::::: ", round(velocidad_bloque, 2))
         yc_anterior1_invertido = yc_invertido.value
@@ -398,7 +446,7 @@ def velocidad2(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido, hora
         # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
         # almacenar_variables_pos(fecha_actual, hora, yc_metros)
         # almacenar_variables_vel(velocidad_bloque, hora, fecha_actual)
-        print("Datos obtenidos TTTTT Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora.value, yc_metros.value, velocidad_bloque)
+        # print("Datos obtenidos TTTTT Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora.value, yc_metros.value, velocidad_bloque)
 
         # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
         time.sleep(3)
@@ -411,9 +459,10 @@ def velocidad2(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido, hora
 
 def tormenta_npt():
     global tiempos_alerta, timer_alerta, contador_alerta, hora_inicio_alerta, fecha_inicio_alerta, duracionAlertaTotalBD, detectado_persona, tiempo_inicial_alerta
-    global mensaje_emitido_alerta, duracionAlertaTotal_en_minutos, duracionAlertaTotalBD
-  
-    
+    global mensaje_emitido_alerta, duracionAlertaTotal_en_minutos, duracionAlertaTotalBD, alerta  
+
+    # print("Alerta en tormenta npt: ", alerta)
+
     if alerta == "1**" or alerta == "2**":
         if not timer_alerta:
             tiempo_inicial_alerta = time.time()
@@ -442,11 +491,43 @@ def tormenta_npt():
         fecha_fin_alerta = time.strftime('%Y-%m-%d', time.localtime(tiempo_final_alerta))
         print(f"Alerta {contador_alerta}: Duración = {duracionAlertaTotalBD} minutos, Fin = {hora_fin_alerta} ({fecha_fin_alerta})")
         timer_alerta = False
-        
 
+contador_paradas_cortas = 0
+tiempos_paradas_cortas = []
+contador_otros_npt = 0 
+tiempos_otros_npt = []     
 
+def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera_deteccion_segundos_almacenado):
+    
+    global contador_paradas_cortas, tiempos_paradas_cortas, contador_otros_npt, tiempos_otros_npt
+    global isTiempos, alerta
+    global target_time_1_segundos_almuerzo, target_time_2_segundos_almuerzo
 
+    tiempo_actual = datetime.datetime.now()
+    tiempo_sin_deteccion = hora_sin_detecciones_segundos_almacenado.value - hora_primera_deteccion_segundos_almacenado.value
 
+    if alerta not in ["2**", "3**"]:  # Excluir tormentas nivel 2** y 3**
+        if isTiempos:  # Excluir tiempos de alimentación
+            desayuno_inicio_segundos = target_time_1_segundos
+            desayuno_final_segundos = target_time_2_segundos
+            almuerzo_inicio_segundos = target_time_1_segundos_almuerzo
+            almuerzo_final_segundos = target_time_2_segundos_almuerzo
+
+            en_horario_desayuno = desayuno_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= desayuno_final_segundos
+            en_horario_almuerzo = almuerzo_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= almuerzo_final_segundos
+            print("estoy acá")
+
+            if not en_horario_desayuno and not en_horario_almuerzo:
+                if detectado_persona == False and tiempo_sin_deteccion > 0:
+                    # Clasificar tiempo según duración
+                    if tiempo_sin_deteccion <= 2 * 60:  # Parada corta
+                        contador_paradas_cortas += 1
+                        tiempos_paradas_cortas.append(tiempo_sin_deteccion)
+                        print(f"Parada corta registrada: {tiempo_sin_deteccion // 60} minutos")
+                    else:  # Otros NPT
+                        contador_otros_npt += 1
+                        tiempos_otros_npt.append(tiempo_sin_deteccion)
+                        print(f"Otros NPT registrado: {tiempo_sin_deteccion // 60} minutos")
 
 
 if __name__ == "__main__":
@@ -479,6 +560,11 @@ if __name__ == "__main__":
                                     hora, cronometro_activo)
 
     )   
+
+    hilo_npt_almacenado = threading.Thread(target=gestionar_tiempos_npt, args=(
+                                                   hora_primera_deteccion_segundos_almacenado, 
+                                                   hora_sin_detecciones_segundos_almacenado))
+    hilo_npt_almacenado.start()
                
 
     hilo_velocidad2 = threading.Thread(target=velocidad2, args=(yc_metros, yc_invertido,
