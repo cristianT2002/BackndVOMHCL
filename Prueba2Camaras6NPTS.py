@@ -109,6 +109,58 @@ ahora1 = 0
 ahora2 = 0
 
 
+#BASES DE DATOS
+
+def actualizar_variables_desde_bd():
+    global bandera, ipcam, ipcam2, probabilidad, ipcamFloat, banderin_actual, tiempos_comida, tiemposComidaFormateado
+    global isTiempos, mesa, contrapozo, nombrepozo, banderaCon
+    while True:
+        try:
+            # Establecer conexión a la base de datos
+            conexion = pymysql.connect(host=DB_HOST,
+                                       user=DB_USER,
+                                       password=DB_PASSWORD,
+                                       database=DB_DATABASE)
+            try:
+                with conexion.cursor() as cursor:
+                    # Consulta SQL para obtener el último valor de 'bandera' e 'ipcam'
+                    sql = "SELECT bandera, Control_Desconexion, ipcam, ipcam2, probabilidad, Banderin, TimeValores, Mesa, Contrapozo, NombrePozo FROM TPCvariables ORDER BY ID DESC LIMIT 1"
+                    cursor.execute(sql)
+                    resultado = cursor.fetchone()
+                    if resultado:
+                        global bandera, ipcam, ipcam2, probabilidad, banderaCon
+                        bandera, banderaCon, ipcam, ipcam2, probabilidad, Banderin, time_comidas, mesa, contrapozo, nombrepozo = resultado
+                        ipcamFloat = float(probabilidad)                        
+                        banderin_actual = Banderin
+                        
+                        tiempos_comida = time_comidas
+                        
+                        times = tiempos_comida.split("; ")
+                        # Crear los tres arrays
+                        array1 = times[:2]
+                        array2 = times[2:4]
+                        array3 = times[4:]
+
+                        # Colocamos los valores de las comidas en un diccionario
+                        tiemposComidaFormateado = {
+                            'desayuno':array1,
+                            'almuerzo':array2,
+                            'comida':array3
+                        }
+
+                        print("Comidas: ", tiemposComidaFormateado)
+                        isTiempos = True
+
+                        if tiempos_comida == 'Tiempo_24':
+                            isTiempos = False
+            finally:
+                conexion.close()
+        except Exception as e:
+            print(f"Error al consultar la base de datos: {e}")
+        time.sleep(1)  # Esperar un segundo antes de la próxima consulta
+
+
+
 def npt_alerta():
     global alerta, url
     
@@ -579,6 +631,9 @@ if __name__ == "__main__":
 
     hilo_npt_tormenta = threading.Thread(target=npt_alerta)
     hilo_npt_tormenta.start()                                                                                                                                                      
+
+    hilo_obtener_variables_desde_bd = threading.Thread(target=actualizar_variables_desde_bd)
+    hilo_obtener_variables_desde_bd.start()
 
     hilo_logica_personas = threading.Thread(
         target=logica_deteccion_personas, args=(hora_primera_deteccion_segundos_almacenado, 
