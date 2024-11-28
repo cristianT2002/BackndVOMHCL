@@ -78,7 +78,7 @@ def cronometro():
         try:
             response = cam.System.time(method='get')
             local_time = response['Time']['localTime']
-            hora = local_time.split('T')[1].split('-')[0]  # Extraer solo la parte de la hora
+            hora.value = local_time.split('T')[1].split('-')[0]  # Extraer solo la parte de la hora
             print(hora)  # Imprimir la hora en formato HH:MM:SS
         except KeyError as e:
             print(f"Error al acceder a la respuesta: {e}")
@@ -360,8 +360,7 @@ if __name__ == "__main__":
     yc_invertido = manager.Value('f', 0.0)
     max_yc_invertido = manager.Value('f', 0.0)
     min_yc_invertido = manager.Value('f', 0.0)
-    print("h")
-
+    hora = manager.Value('u', '')  # 'u' para string Unicode
 
     url1 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
     url2 = "rtsp://admin:4xUR3_2017@172.30.37.231:554/Streaming/Channels/102"

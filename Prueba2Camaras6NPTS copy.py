@@ -59,19 +59,6 @@ duracionAlertaTotalBD = 0
 duracionAlertaTotal_en_minutos = 0 
 
 
-# -------------- Variable para almacenar los tiempos de comida --------------
-tiempos_comida = ''
-tiemposComidaFormateado = {}
-isTiempos = False
-target_time_1_segundos = 0
-target_time_2_segundos = 0
-target_time_1_segundos_almuerzo = 0
-target_time_2_segundos_almuerzo = 0
-tiempos_alerta_alimentacion = []
-contador_alerta_alimentacion = 0
-ultimo_contador_alerta_alimentacion = 0
-tiempos_alerta_alimentacion = []
-
 
 
 # ------------------------ Variables para YC posición y velocidad ----------------
@@ -148,7 +135,7 @@ def actualizar_variables_desde_bd():
                             'comida':array3
                         }
 
-                        print("Comidas: ", tiemposComidaFormateado)
+                        # print("Comidas en BD: ", tiemposComidaFormateado)
                         isTiempos = True
 
                         if tiempos_comida == 'Tiempo_24':
@@ -157,7 +144,7 @@ def actualizar_variables_desde_bd():
                 conexion.close()
         except Exception as e:
             print(f"Error al consultar la base de datos: {e}")
-        time.sleep(1)  # Esperar un segundo antes de la próxima consulta
+        time.sleep(2)  # Esperar un segundo antes de la próxima consulta
 
 
 
@@ -207,7 +194,7 @@ def cronometro(hora):
             local_time = response['Time']['localTime']
             # Extraer la hora sin la zona horaria (por ejemplo, quitar "+08:00")
             hora.value = str(local_time.split('T')[1].split('+')[0])  # Extraer solo HH:MM:SS
-            print(f"Hora actualizada: {hora.value}")  # Imprimir la hora limpia
+            # print(f"Hora actualizada: {hora.value}")  # Imprimir la hora limpia
         except KeyError as e:
             print(f"Error al acceder a la respuesta: {e}")
         except (TypeError, AttributeError) as e:
@@ -244,7 +231,7 @@ def procesar_frame_camara1(frame, results, hora_primera_deteccion_segundos_almac
     for result in results:
         for box, conf, cls in zip(result.boxes.xyxy, result.boxes.conf, result.boxes.cls):
             x_min, y_min, x_max, y_max = map(int, box)
-            if cls == 1 and conf >= 0.1:
+            if cls == 0 and conf >= 0.1:
                 cv2.rectangle(annotated_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
                 xc, yc = int((x_min + x_max) / 2), y_min
 
@@ -445,16 +432,14 @@ def logica_deteccion_personas(hora_primera_deteccion_segundos_almacenado, hora_s
     while True:
         with lock:
 
-            print("ultimo contador alerta: ", ultimo_contador_alerta)
-            print("Contador alerta: ", contador_alerta, fecha_inicio_alerta, hora_inicio_alerta, 0, 0, duracionAlertaTotalBD, 0, 0, 0, 'tormenta', nombrepozo)
+            # print("ultimo contador alerta: ", ultimo_contador_alerta)
+            # print("Contador alerta: ", contador_alerta, fecha_inicio_alerta, hora_inicio_alerta, 0, 0, duracionAlertaTotalBD, 0, 0, 0, 'tormenta', nombrepozo)
 
             if contador_alerta > ultimo_contador_alerta:
 
                 if duracionAlertaTotalBD <= 0.5:
                     contador_alerta -= 1
-                    print("Contador alerta antes del else: ", contador_alerta)
                 else:
-                    print("Contador alerta antes despues : ", contador_alerta, fecha_inicio_alerta, hora_inicio_alerta, 0, 0, duracionAlertaTotalBD, 0, 0, 0, 'tormenta', nombrepozo)
                     ultimo_contador_alerta = contador_alerta  # Actualiza el último valor del contador
 
 
@@ -463,48 +448,10 @@ def logica_deteccion_personas(hora_primera_deteccion_segundos_almacenado, hora_s
 
             # alimentacion(hora_primera_deteccion_segundos, hora_sin_detecciones_segundos)
             tormenta_npt()
+            alimentacion(hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado)
+            gestionar_tiempos_npt(hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado)
+
         time.sleep(2)
-
-#-------------------- Función para calcular la velocidad
-def velocidad(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
-    global Metros, tiempo_prom, velocidad_bloque
-    # Definir valor inicial de yc_anterior1_invertido
-    yc_anterior1_invertido = 0
-    while True:
-        # Comprobación de que max_yc_invertido sea mayor que min_yc_invertido
-        if max_yc_invertido.value > 0 and min_yc_invertido.value is not None and max_yc_invertido.value != min_yc_invertido.value:
-            # Calcular la velocidad del bloque solo si tiempo_prom es mayor que cero
-            if tiempo_prom > 0:
-                velocidad_bloque = round(abs(((yc_invertido.value - yc_anterior1_invertido) * (Metros / (max_yc_invertido.value - min_yc_invertido.value))) / tiempo_prom), 2)
-            else:
-                velocidad_bloque = 0
-        else:
-            velocidad_bloque = 0
-        # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
-        # print(f"x: {yc_invertido.value}, x: {Metros}, x: {tiempo_prom}, x: {yc_anterior1_invertido}, x: {yc_metros.value}")
-        # print(f"x: {max_yc_invertido.value}, x: {min_yc_invertido.value}, x: {velocidad_bloque}")
-
-        # print("Velocidad del bloque:::::: ", round(velocidad_bloque, 2))
-        yc_anterior1_invertido = yc_invertido.value
-        # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
-        time.sleep(tiempo_prom)
-
-def velocidad2(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido, hora):
-    global Metros, tiempo_prom, velocidad_bloque
-    # Definir valor inicial de yc_anterior1_invertido
-    yc_anterior1_invertido = 0
-    while True:
-        # Comprobación de que max_yc_invertido sea mayor que min_yc_invertido
-        # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
-        # almacenar_variables_pos(fecha_actual, hora, yc_metros)
-        # almacenar_variables_vel(velocidad_bloque, hora, fecha_actual)
-        # print("Datos obtenidos TTTTT Fecha, hora, yc_metros, velocidad_bloque", fecha_actual, hora.value, yc_metros.value, velocidad_bloque)
-
-        # Esperar el tiempo definido por tiempo_prom antes de la próxima iteración
-        time.sleep(3)
-
-
-
 
 #---------------- Funciones para NPTS ----------------
 
@@ -554,10 +501,18 @@ def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera
     global contador_paradas_cortas, tiempos_paradas_cortas, contador_otros_npt, tiempos_otros_npt
     global isTiempos, alerta
     global target_time_1_segundos_almuerzo, target_time_2_segundos_almuerzo
+    global target_time_1_segundos, target_time_2_segundos
+
 
     tiempo_actual = datetime.datetime.now()
     tiempo_sin_deteccion = hora_sin_detecciones_segundos_almacenado.value - hora_primera_deteccion_segundos_almacenado.value
 
+    desayuno_inicio_segundos = 0 
+    desayuno_final_segundos = 0
+    almuerzo_inicio_segundos = 0
+    almuerzo_final_segundos = 0
+
+    
     if alerta not in ["2**", "3**"]:  # Excluir tormentas nivel 2** y 3**
         if isTiempos:  # Excluir tiempos de alimentación
             desayuno_inicio_segundos = target_time_1_segundos
@@ -565,9 +520,11 @@ def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera
             almuerzo_inicio_segundos = target_time_1_segundos_almuerzo
             almuerzo_final_segundos = target_time_2_segundos_almuerzo
 
-            en_horario_desayuno = desayuno_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= desayuno_final_segundos
+            en_horario_desayuno = desayuno_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= desayuno_final_segundos 
             en_horario_almuerzo = almuerzo_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= almuerzo_final_segundos
+           
             print("estoy acá")
+            print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
 
             if not en_horario_desayuno and not en_horario_almuerzo:
                 if detectado_persona == False and tiempo_sin_deteccion > 0:
@@ -582,17 +539,30 @@ def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera
                         print(f"Otros NPT registrado: {tiempo_sin_deteccion // 60} minutos")
 
 
-
 def time_to_seconds(t):
     """Convierte un objeto time a segundos desde la medianoche."""
     return t.hour * 3600 + t.minute * 60 + t.second
+
+# -------------- Variable para almacenar los tiempos de comida --------------
+tiempos_comida = ''
+tiemposComidaFormateado = {}
+isTiempos = False
+target_time_1_segundos = 0
+target_time_2_segundos = 0
+target_time_1_segundos_almuerzo = 0
+target_time_2_segundos_almuerzo = 0
+tiempos_alerta_alimentacion = []
+contador_alerta_alimentacion = 0
+ultimo_contador_alerta_alimentacion = 0
+tiempos_alerta_alimentacion = []
+alerta_activada = False
 
 
 def alimentacion(hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado):
 
     global tiempos_comida, tiemposComidaFormateado, isTiempos, target_time_1_segundos, target_time_2_segundos
     global target_time_1_segundos_almuerzo, target_time_2_segundos_almuerzo, tiempos_alerta_alimentacion
-
+    global alerta_activada
 
     hora_inicio_alerta_alimentacion = None
     hora_inicio_alerta_alimentacionFINAL = None
@@ -602,9 +572,13 @@ def alimentacion(hora_primera_deteccion_segundos_almacenado, hora_sin_deteccione
     duracionAlertaTotal_alimentacion_en_minutos = 0
     timer_alerta_alimentacion = None
 
-    print("Tarjet sin detecciones:", hora_primera_deteccion_segundos_almacenado.value)
-    print("Hora primera detección:", hora_sin_detecciones_segundos_almacenado.value)
-    print("bandera isTiempos", isTiempos)
+
+    # print("Tarjet sin detecciones:", hora_primera_deteccion_segundos_almacenado.value)
+    # print("Hora primera detección:", hora_sin_detecciones_segundos_almacenado.value)
+    # print("bandera isTiempos", isTiempos
+    # print("Comidas en alimentación: ", tiemposComidaFormateado)
+
+
 
     if isTiempos == True:
 # ------------------------------ Formato de desayuno -----------------------------------------
@@ -692,25 +666,25 @@ def alimentacion(hora_primera_deteccion_segundos_almacenado, hora_sin_deteccione
         print("Target time 2 almuerzo: ", target_time_2_segundos_almuerzo)
         print("")
         print("")
-        print("primera detección: ", hora_primera_deteccion_segundos_almacenado.value)
-        print("Tarjet sin detecciones: ", hora_sin_detecciones_segundos_almacenado.value)
+        # print("primera detección: ", hora_primera_deteccion_segundos_almacenado.value)
+        # print("Tarjet sin detecciones: ", hora_sin_detecciones_segundos_almacenado.value)
         
-        #------------------------ Alerta de alimentación -------------------------
-        print("")
-        print("")
-        print("")
+        # #------------------------ Alerta de alimentación -------------------------
+        # print("")
+        # print("")
+        # print("")
 
-        print(f"Inicio de la alerta de alimentación: {hora_inicio_alerta_alimentacion} ({fecha_inicio_alerta_alimentacion})")
-        duracionAlertaTotal_alimentacionBD = float("{:.2f}".format(duracionAlertaTotal_alimentacion_en_minutos))  # Formato como minutos con dos decimales
-        print(f"Alerta de alimentación {contador_alerta_alimentacion}: Duración = {duracionAlertaTotal_alimentacionBD} minutos, Fin = {hora_fin_alerta_alimentacion} ({fecha_fin_alerta_alimentacion})")
+        # print(f"Inicio de la alerta de alimentación: {hora_inicio_alerta_alimentacion} ({fecha_inicio_alerta_alimentacion})")
+        # duracionAlertaTotal_alimentacionBD = float("{:.2f}".format(duracionAlertaTotal_alimentacion_en_minutos))  # Formato como minutos con dos decimales
+        # print(f"Alerta de alimentación {contador_alerta_alimentacion}: Duración = {duracionAlertaTotal_alimentacionBD} minutos, Fin = {hora_fin_alerta_alimentacion} ({fecha_fin_alerta_alimentacion})")
 
-        print("")
-        print("")
-        print("")
+        # print("")
+        # print("")
+        # print("")
 
     if isTiempos == True:
         #------------------ Condicional para alimentacion desayuno ----------------
-        if not alerta_activada and (target_time_1_segundos + 60) >= hora_sin_detecciones_segundos_almacenado >= (target_time_1_segundos - 60) and hora_primera_deteccion_segundos < target_time_2_segundos:
+        if not alerta_activada and (target_time_1_segundos + 60) >= hora_sin_detecciones_segundos_almacenado.value >= (target_time_1_segundos - 60) and hora_primera_deteccion_segundos_almacenado.value < target_time_2_segundos:
             tiempo_inicial_alerta_alimentacion = time.time()
             hora_inicio_alerta_alimentacion = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(tiempo_inicial_alerta_alimentacion))
             hora_inicio_alerta_alimentacionFINAL = datetime.datetime.now().strftime("%H:%M:%S")
@@ -719,7 +693,7 @@ def alimentacion(hora_primera_deteccion_segundos_almacenado, hora_sin_deteccione
             alerta_activada = True
 
         # Lógica para finalizar la alerta y contarla solo si ambas condiciones se cumplen
-        elif alerta_activada and (target_time_1_segundos + 60) >= hora_sin_detecciones_segundos_almacenado >= (target_time_1_segundos - 60) and (target_time_2_segundos + 60) >= hora_primera_deteccion_segundos >= (target_time_2_segundos - 60):
+        elif alerta_activada and (target_time_1_segundos + 60) >= hora_sin_detecciones_segundos_almacenado.value >= (target_time_1_segundos - 60) and (target_time_2_segundos + 60) >= hora_primera_deteccion_segundos_almacenado.value >= (target_time_2_segundos - 60):
             tiempo_final_alerta_alimentacion = time.time()
             duracionAlertaTotal_alimentacion = tiempo_final_alerta_alimentacion - tiempo_inicial_alerta_alimentacion
             duracionAlertaTotal_alimentacion_en_minutos = duracionAlertaTotal_alimentacion / 60  # Convertir la duración a minutos
@@ -735,7 +709,7 @@ def alimentacion(hora_primera_deteccion_segundos_almacenado, hora_sin_deteccione
        #------------------------------------------------------
        # -----------------------------------------------------
 
-        if not alerta_activada and (target_time_1_segundos_almuerzo + 60) >= hora_sin_detecciones_segundos_almacenado >= (target_time_1_segundos_almuerzo - 60) and hora_primera_deteccion_segundos < target_time_2_segundos_almuerzo:
+        if not alerta_activada and (target_time_1_segundos_almuerzo + 60) >= hora_sin_detecciones_segundos_almacenado.value >= (target_time_1_segundos_almuerzo - 60) and hora_primera_deteccion_segundos_almacenado.value < target_time_2_segundos_almuerzo:
             tiempo_inicial_alerta_alimentacion = time.time()
             hora_inicio_alerta_alimentacion = time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(tiempo_inicial_alerta_alimentacion))
             hora_inicio_alerta_alimentacionFINAL = datetime.datetime.now().strftime("%H:%M:%S")
@@ -744,7 +718,7 @@ def alimentacion(hora_primera_deteccion_segundos_almacenado, hora_sin_deteccione
             alerta_activada = True
 
         # Lógica para finalizar la alerta y contarla solo si ambas condiciones se cumplen
-        elif alerta_activada and (target_time_1_segundos_almuerzo + 60) >= hora_sin_detecciones_segundos_almacenado >= (target_time_1_segundos_almuerzo - 60) and (target_time_2_segundos_almuerzo + 60) >= hora_primera_deteccion_segundos >= (target_time_2_segundos_almuerzo - 60):
+        elif alerta_activada and (target_time_1_segundos_almuerzo + 60) >= hora_sin_detecciones_segundos_almacenado.value >= (target_time_1_segundos_almuerzo - 60) and (target_time_2_segundos_almuerzo + 60) >= hora_primera_deteccion_segundos_almacenado.value >= (target_time_2_segundos_almuerzo - 60):
             tiempo_final_alerta_alimentacion = time.time()
             duracionAlertaTotal_alimentacion = tiempo_final_alerta_alimentacion - tiempo_inicial_alerta_alimentacion
             duracionAlertaTotal_alimentacion_en_minutos = duracionAlertaTotal_alimentacion / 60  # Convertir la duración a minutos
@@ -769,8 +743,8 @@ if __name__ == "__main__":
     cronometro_activo = manager.Value('b', False)  # Para controlar el cronómetro
 
 
-    url1 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
-    url2 = "rtsp://admin:4xUR3_2017@172.30.37.231:554/Streaming/Channels/102"
+    url2 = "rtsp://admin:4xUR3_2017@172.30.37.241:554/Streaming/Channels/102"
+    url1 = "rtsp://admin:4xUR3_2017@172.30.37.231:554/Streaming/Channels/102"
  
     proceso_grabacion1 = multiprocessing.Process(
         target=grabar_camara, args=(url1, 120, "video_segmento1", model, procesar_frame_camara1, 
@@ -789,38 +763,27 @@ if __name__ == "__main__":
 
     )   
 
-    hilo_npt_almacenado = threading.Thread(target=gestionar_tiempos_npt, args=(
-                                                   hora_primera_deteccion_segundos_almacenado, 
-                                                   hora_sin_detecciones_segundos_almacenado))
-    hilo_npt_almacenado.start()
-               
-
-    hilo_velocidad2 = threading.Thread(target=velocidad2, args=(yc_metros, yc_invertido,
-                                                             max_yc_invertido, min_yc_invertido,
-                                                             hora))
-    hilo_velocidad2.start()  
 
 
-    hilo_velocidad = threading.Thread(target=velocidad, args=(yc_metros, yc_invertido,
-                                                             max_yc_invertido, min_yc_invertido))
-    hilo_velocidad.start()      
-
-
-    hilo_npt_tormenta = threading.Thread(target=npt_alerta)
-    hilo_npt_tormenta.start() 
+    # hilo_velocidad2 = threading.Thread(target=velocidad2, args=(yc_metros, yc_invertido,
+    #                                                          max_yc_invertido, min_yc_invertido, hora))
+    # hilo_velocidad2.start()  
 
 
 
-    hilo_npt_alimentacion = threading.Thread(
-        target=alimentacion, args=(hora_primera_deteccion_segundos_almacenado, 
-                                    hora_sin_detecciones_segundos_almacenado))
-    hilo_npt_alimentacion.start() 
+    # hilo_velocidad = threading.Thread(target=velocidad, args=(yc_metros, yc_invertido,
+    #                                                          max_yc_invertido, min_yc_invertido))
+    # hilo_velocidad.start()      
+
+
+
+    # hilo_npt_tormenta = threading.Thread(target=npt_alerta)
+    # hilo_npt_tormenta.start() 
 
 
 
     hilo_obtener_variables_desde_bd = threading.Thread(target=actualizar_variables_desde_bd)
     hilo_obtener_variables_desde_bd.start()
-
 
 
     hilo_logica_personas = threading.Thread(

@@ -9,7 +9,8 @@ from ultralytics import YOLO
 import pymysql
 import torch
 from hikvisionapi import Client
-
+import requests
+from bs4 import BeautifulSoup
  
 # Configuración del modelo YOLO
 MODEL_PATH = "ModelosYolo/best7.pt"
@@ -65,6 +66,43 @@ hora_primera_deteccion_segundos_almacenado = 0
 detectado_persona = None
 ahora1 = 0
 ahora2 = 0
+
+
+def npt_alerta():
+    global alerta, ipcam2, url
+    
+    while True:
+
+        try:
+            url = 'http://consultas.axuretechnologies.com:8081/axure/niveles-total/' + "SAT0331"
+    
+            # Realizar una petición GET a la URL
+            respuesta = requests.get(url)
+        
+            html_content = respuesta.text
+    
+            # Reemplazar etiquetas <BR> y <LF> por espacios y saltos de línea
+            html_content = html_content.replace('<BR>', ' ').replace('<LF>', '\n')
+    
+            # Analizar el contenido HTML modificado con BeautifulSoup
+            soup = BeautifulSoup(html_content, 'html.parser')
+    
+            # Obtener todos los strings de texto, ahora sin etiquetas <BR> y <LF>
+            texto_deseado = ' '.join(soup.stripped_strings)
+    
+            array_variables  =  texto_deseado.split()
+
+            alerta = array_variables[3]
+
+            print("Alerta: ", alerta)   
+
+        except Exception as e:
+            print(f"Error inesperado: {e}")
+            print("Reintentando...")
+            time.sleep(5)
+            continue
+        
+        time.sleep(1)
 
 
 # --------------------------------------------------------------------------------
@@ -390,7 +428,9 @@ if __name__ == "__main__":
 
     hilo_velocidad = threading.Thread(target=velocidad, args=(yc_metros, yc_invertido,
                                                              max_yc_invertido, min_yc_invertido))
-    hilo_velocidad.start()                                                                                                                                                            
+    hilo_velocidad.start()
+    
+                                                                                                                                                                
 
     hilo_logica_personas = threading.Thread(
         target=logica_deteccion_personas, args=(hora_primera_deteccion_segundos_almacenado, 

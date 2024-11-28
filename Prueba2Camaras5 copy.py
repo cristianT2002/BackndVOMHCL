@@ -73,7 +73,6 @@ ahora2 = 0
 
 #----------------------------Función de cronometro con metadata
 def cronometro():
-    global hora
     while True:
         try:
             response = cam.System.time(method='get')
@@ -233,7 +232,7 @@ def grabar_camara(url, duracion_segmento, nombre_segmento, modelo, procesar_fram
             cv2.destroyAllWindows()
  
 
-def velocidad(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
+def velocidad(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido, hora):
     global Metros, tiempo_prom, velocidad_bloque
     # Definir valor inicial de yc_anterior1_invertido
     yc_anterior1_invertido = 0
@@ -250,6 +249,7 @@ def velocidad(yc_metros, yc_invertido, max_yc_invertido, min_yc_invertido):
         # print("Variables utilizadas en la velocidad:", yc_invertido.value, Metros, max_yc_invertido, tiempo_prom, yc_anterior1_invertido, yc_metros.value)
         print(f"x: {yc_invertido.value}, x: {Metros}, x: {tiempo_prom}, x: {yc_anterior1_invertido}, x: {yc_metros.value}")
         print(f"x: {max_yc_invertido.value}, x: {min_yc_invertido.value}, x: {velocidad_bloque}")
+        print(f"Hora actual: {hora.value}")  # Usar la hora compartida
 
         # print("Velocidad del bloque:::::: ", round(velocidad_bloque, 2))
         yc_anterior1_invertido = yc_invertido.value
