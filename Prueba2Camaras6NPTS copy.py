@@ -231,7 +231,7 @@ def procesar_frame_camara1(frame, results, hora_primera_deteccion_segundos_almac
     for result in results:
         for box, conf, cls in zip(result.boxes.xyxy, result.boxes.conf, result.boxes.cls):
             x_min, y_min, x_max, y_max = map(int, box)
-            if cls == 0 and conf >= 0.1:
+            if cls == 1 and conf >= 0.1:
                 cv2.rectangle(annotated_frame, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
                 xc, yc = int((x_min + x_max) / 2), y_min
 
@@ -443,8 +443,8 @@ def logica_deteccion_personas(hora_primera_deteccion_segundos_almacenado, hora_s
                     ultimo_contador_alerta = contador_alerta  # Actualiza el último valor del contador
 
 
-            # print("Hora sin detecciones:", hora_sin_detecciones_segundos_almacenado.value)
-            # print("Hora primera detección:", hora_primera_deteccion_segundos_almacenado.value)
+            print("Hora sin detecciones:", hora_sin_detecciones_segundos_almacenado.value)
+            print("Hora primera detección:", hora_primera_deteccion_segundos_almacenado.value)
 
             # alimentacion(hora_primera_deteccion_segundos, hora_sin_detecciones_segundos)
             tormenta_npt()
@@ -504,6 +504,8 @@ def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera
     global target_time_1_segundos, target_time_2_segundos
 
 
+    print("En gestionar tiempos NPT primera nueva detección: ", hora_primera_deteccion_segundos_almacenado.value)
+
     tiempo_actual = datetime.datetime.now()
     tiempo_sin_deteccion = hora_sin_detecciones_segundos_almacenado.value - hora_primera_deteccion_segundos_almacenado.value
 
@@ -511,6 +513,8 @@ def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera
     desayuno_final_segundos = 0
     almuerzo_inicio_segundos = 0
     almuerzo_final_segundos = 0
+    en_horario_desayuno = None
+    en_horario_almuerzo = None
 
     
     if alerta not in ["2**", "3**"]:  # Excluir tormentas nivel 2** y 3**
@@ -520,15 +524,16 @@ def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera
             almuerzo_inicio_segundos = target_time_1_segundos_almuerzo
             almuerzo_final_segundos = target_time_2_segundos_almuerzo
 
-            en_horario_desayuno = desayuno_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= desayuno_final_segundos 
-            en_horario_almuerzo = almuerzo_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= almuerzo_final_segundos
-           
-            print("estoy acá")
-            print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
+            en_horario_desayuno = (desayuno_inicio_segundos + 300) >= hora_sin_detecciones_segundos_almacenado.value >= (desayuno_inicio_segundos - 300) and (desayuno_final_segundos + 60) >= hora_primera_deteccion_segundos_almacenado.value >= (desayuno_final_segundos - 60)
+            en_horario_almuerzo = (almuerzo_inicio_segundos + 300) >= hora_sin_detecciones_segundos_almacenado.value >= (almuerzo_inicio_segundos - 60) and (almuerzo_final_segundos + 60) >= hora_primera_deteccion_segundos_almacenado.value >= (almuerzo_final_segundos - 60)   
+
+            # print("estoy acá")
+            # print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
 
             if not en_horario_desayuno and not en_horario_almuerzo:
                 if detectado_persona == False and tiempo_sin_deteccion > 0:
                     # Clasificar tiempo según duración
+                    print("ahora estoy acá")
                     if tiempo_sin_deteccion <= 2 * 60:  # Parada corta
                         contador_paradas_cortas += 1
                         tiempos_paradas_cortas.append(tiempo_sin_deteccion)
