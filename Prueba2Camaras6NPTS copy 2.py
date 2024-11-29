@@ -681,7 +681,7 @@ def gestionar_tiempos_npt(hora_primera_deteccion_segundos_almacenado, hora_sin_d
                     if not en_horario_desayuno and not en_horario_almuerzo:
                         # Clasificar el tiempo según duración
                         if tiempo_sin_deteccion > 0:
-                            if 1 * 60 < tiempo_sin_deteccion <= 10 * 60:  # Parada corta si está entre 5 y 10 minutos
+                            if tiempo_sin_deteccion <= 2 * 60:  # Parada corta
                                 # Solo registrar si no se ha registrado ya
                                 if not registrado_parada_corta:
                                     contador_paradas_cortas += 1
@@ -689,7 +689,7 @@ def gestionar_tiempos_npt(hora_primera_deteccion_segundos_almacenado, hora_sin_d
                                     registrado_parada_corta = True  # Marcar que ya se registró
                                     print("contador paradas cortas: ", contador_paradas_cortas)
                                     print(f"Parada corta registrada: {tiempo_sin_deteccion } segundos")
-                            elif tiempo_sin_deteccion > 10 * 60:  # Otros NPT si es mayor a 10 minutos
+                            else:  # Otros NPT
                                 # Solo registrar si no se ha registrado ya
                                 if not registrado_otros_npt:
                                     contador_otros_npt += 1
