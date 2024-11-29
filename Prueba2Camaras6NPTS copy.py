@@ -287,6 +287,8 @@ def procesar_frame_camara2(frame, results, hora_primera_deteccion_segundos_almac
     # print("Hora primera detección confirmada en segundos sostenido:", hora_primera_deteccion_segundos_almacenado)
     # print("Hora sin detección confirmada en segundos sostenido:", hora_sin_detecciones_segundos_almacenado)
 
+    print("la persona se detecta en:", detectado_persona)
+
     for result in results:
         for box, conf, cls in zip(result.boxes.xyxy, result.boxes.conf, result.boxes.cls):
             x_min, y_min, x_max, y_max = map(int, box)
@@ -305,7 +307,7 @@ def procesar_frame_camara2(frame, results, hora_primera_deteccion_segundos_almac
             tiempo_no_deteccion_acumulado = 0
 
             # Confirmar detección si se acumulan al menos 3 segundos
-            if tiempo_deteccion_acumulado >= 3 and not deteccion_confirmada:
+            if tiempo_deteccion_acumulado >= 2 and not deteccion_confirmada:
                 deteccion_confirmada = True
                 no_deteccion_confirmada = False
                 ahora1 = datetime.datetime.now().strftime("%H:%M:%S")
@@ -313,7 +315,7 @@ def procesar_frame_camara2(frame, results, hora_primera_deteccion_segundos_almac
                 print("Hora primera detección confirmada en segundos:", hora_primera_deteccion_segundos)
                 hora_primera_deteccion_segundos_almacenado.value = hora_primera_deteccion_segundos
 
-            if tiempo_deteccion_acumulado >= 3 and not deteccion_confirmada:
+            if tiempo_deteccion_acumulado >= 2 and not deteccion_confirmada:
                 hora_primera_deteccion_segundos_almacenado.value = hora_primera_deteccion_segundos
                 # print("hora_primera_deteccion_segundos_almacenado actualizado a:", hora_primera_deteccion_segundos_almacenado)
 
@@ -496,17 +498,16 @@ tiempos_paradas_cortas = []
 contador_otros_npt = 0 
 tiempos_otros_npt = []     
 
-def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera_deteccion_segundos_almacenado):
+
+def gestionar_tiempos_npt(hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado):
     
     global contador_paradas_cortas, tiempos_paradas_cortas, contador_otros_npt, tiempos_otros_npt
     global isTiempos, alerta
     global target_time_1_segundos_almuerzo, target_time_2_segundos_almuerzo
     global target_time_1_segundos, target_time_2_segundos
+    global detectado_persona, tiempo_sin_deteccion
 
-
-    print("En gestionar tiempos NPT primera nueva detección: ", hora_primera_deteccion_segundos_almacenado.value)
-
-    tiempo_actual = datetime.datetime.now()
+    # Cálculo del tiempo sin detección
     tiempo_sin_deteccion = hora_sin_detecciones_segundos_almacenado.value - hora_primera_deteccion_segundos_almacenado.value
 
     desayuno_inicio_segundos = 0 
@@ -516,23 +517,56 @@ def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera
     en_horario_desayuno = None
     en_horario_almuerzo = None
 
-    
+    # Verificar si estamos en una alerta de tormenta nivel 2** o 3**
     if alerta not in ["2**", "3**"]:  # Excluir tormentas nivel 2** y 3**
         if isTiempos:  # Excluir tiempos de alimentación
+            # Inicialización de tiempos de desayuno y almuerzo
             desayuno_inicio_segundos = target_time_1_segundos
             desayuno_final_segundos = target_time_2_segundos
             almuerzo_inicio_segundos = target_time_1_segundos_almuerzo
             almuerzo_final_segundos = target_time_2_segundos_almuerzo
 
-            en_horario_desayuno = (desayuno_inicio_segundos + 300) >= hora_sin_detecciones_segundos_almacenado.value >= (desayuno_inicio_segundos - 300) and (desayuno_final_segundos + 60) >= hora_primera_deteccion_segundos_almacenado.value >= (desayuno_final_segundos - 60)
-            en_horario_almuerzo = (almuerzo_inicio_segundos + 300) >= hora_sin_detecciones_segundos_almacenado.value >= (almuerzo_inicio_segundos - 60) and (almuerzo_final_segundos + 60) >= hora_primera_deteccion_segundos_almacenado.value >= (almuerzo_final_segundos - 60)   
+            # Lógica para gestionar los tiempos de desayuno y almuerzo
 
-            # print("estoy acá")
-            # print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
+            # Verificar si hora_sin_detecciones está dentro del horario de desayuno o almuerzo
+            if desayuno_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= desayuno_final_segundos:
+                en_horario_desayuno = True
+            else:
+                en_horario_desayuno = False
 
+            if almuerzo_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= almuerzo_final_segundos:
+                en_horario_almuerzo = True
+            else:
+                en_horario_almuerzo = False
+
+            # Si la persona es detectada (hora_primera_deteccion_segundos_almacenado está en rango)
+            if (desayuno_inicio_segundos <= hora_primera_deteccion_segundos_almacenado.value <= desayuno_final_segundos):
+                en_horario_desayuno = False
+
+            if (almuerzo_inicio_segundos <= hora_primera_deteccion_segundos_almacenado.value <= almuerzo_final_segundos):
+                en_horario_almuerzo = False
+
+            # Si la persona vuelve a dejar de ser detectada y la hora de sin detección es mayor y cae dentro del rango
+            if (desayuno_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= desayuno_final_segundos and
+                hora_sin_detecciones_segundos_almacenado.value > hora_primera_deteccion_segundos_almacenado.value):
+                en_horario_desayuno = True
+
+            if (almuerzo_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= almuerzo_final_segundos and
+                hora_sin_detecciones_segundos_almacenado.value > hora_primera_deteccion_segundos_almacenado.value):
+                en_horario_almuerzo = True
+
+            # Mostrar información para debug
+            print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
+            print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_primera_deteccion_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_primera_deteccion_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
+
+            print("en horario desayuno: ", en_horario_desayuno)
+            print("en horario almuerzo: ", en_horario_almuerzo)
+            print("detectado_persona: ", detectado_persona)
+
+            # Clasificación de tiempos fuera de horarios de alimentación
             if not en_horario_desayuno and not en_horario_almuerzo:
                 if detectado_persona == False and tiempo_sin_deteccion > 0:
-                    # Clasificar tiempo según duración
+                    # Clasificar el tiempo según duración
                     print("ahora estoy acá")
                     if tiempo_sin_deteccion <= 2 * 60:  # Parada corta
                         contador_paradas_cortas += 1
@@ -542,6 +576,137 @@ def gestionar_tiempos_npt(hora_sin_detecciones_segundos_almacenado, hora_primera
                         contador_otros_npt += 1
                         tiempos_otros_npt.append(tiempo_sin_deteccion)
                         print(f"Otros NPT registrado: {tiempo_sin_deteccion // 60} minutos")
+
+
+
+# def gestionar_tiempos_npt(hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado):
+    
+#     global contador_paradas_cortas, tiempos_paradas_cortas, contador_otros_npt, tiempos_otros_npt
+#     global isTiempos, alerta
+#     global target_time_1_segundos_almuerzo, target_time_2_segundos_almuerzo
+#     global target_time_1_segundos, target_time_2_segundos
+
+
+
+#     tiempo_actual = datetime.datetime.now()
+#     tiempo_sin_deteccion = hora_sin_detecciones_segundos_almacenado.value - hora_primera_deteccion_segundos_almacenado.value
+
+#     desayuno_inicio_segundos = 0 
+#     desayuno_final_segundos = 0
+#     almuerzo_inicio_segundos = 0
+#     almuerzo_final_segundos = 0
+#     en_horario_desayuno = None
+#     en_horario_almuerzo = None
+
+    
+#     if alerta not in ["2**", "3**"]:  # Excluir tormentas nivel 2** y 3**
+#         if isTiempos:  # Excluir tiempos de alimentación
+#             desayuno_inicio_segundos = target_time_1_segundos
+#             desayuno_final_segundos = target_time_2_segundos
+#             almuerzo_inicio_segundos = target_time_1_segundos_almuerzo
+#             almuerzo_final_segundos = target_time_2_segundos_almuerzo
+
+#             en_horario_desayuno = desayuno_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= desayuno_final_segundos
+#             en_horario_almuerzo = almuerzo_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= almuerzo_final_segundos
+
+            
+#             # print("estoy acá")
+#             print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
+#             print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_primera_deteccion_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_primera_deteccion_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
+
+
+#             print("en horario desayuno: ", en_horario_desayuno)
+#             print("en horario almuerzo: ", en_horario_almuerzo)
+
+
+#             if not en_horario_desayuno and not en_horario_almuerzo:
+#                 if detectado_persona == False and tiempo_sin_deteccion > 0:
+#                     # Clasificar tiempo según duración
+#                     print("ahora estoy acá")
+#                     if tiempo_sin_deteccion <= 2 * 60:  # Parada corta
+#                         contador_paradas_cortas += 1
+#                         tiempos_paradas_cortas.append(tiempo_sin_deteccion)
+#                         print(f"Parada corta registrada: {tiempo_sin_deteccion // 60} minutos")
+#                     else:  # Otros NPT
+#                         contador_otros_npt += 1
+#                         tiempos_otros_npt.append(tiempo_sin_deteccion)
+#                         print(f"Otros NPT registrado: {tiempo_sin_deteccion // 60} minutos")
+
+
+# def gestionar_tiempos_npt(hora_primera_deteccion_segundos_almacenado, hora_sin_detecciones_segundos_almacenado):
+    
+#     global contador_paradas_cortas, tiempos_paradas_cortas, contador_otros_npt, tiempos_otros_npt
+#     global isTiempos, alerta
+#     global target_time_1_segundos_almuerzo, target_time_2_segundos_almuerzo
+#     global target_time_1_segundos, target_time_2_segundos
+
+#     # Cálculo del tiempo sin detección
+#     tiempo_sin_deteccion = hora_sin_detecciones_segundos_almacenado.value - hora_primera_deteccion_segundos_almacenado.value
+
+#     desayuno_inicio_segundos = 0 
+#     desayuno_final_segundos = 0
+#     almuerzo_inicio_segundos = 0
+#     almuerzo_final_segundos = 0
+#     en_horario_desayuno = None
+#     en_horario_almuerzo = None
+
+#     # Verificar si estamos en una alerta de tormenta nivel 2** o 3**
+#     if alerta not in ["2**", "3**"]:  # Excluir tormentas nivel 2** y 3**
+#         if isTiempos:  # Excluir tiempos de alimentación
+#             # Inicialización de tiempos de desayuno y almuerzo
+#             desayuno_inicio_segundos = target_time_1_segundos
+#             desayuno_final_segundos = target_time_2_segundos
+#             almuerzo_inicio_segundos = target_time_1_segundos_almuerzo
+#             almuerzo_final_segundos = target_time_2_segundos_almuerzo
+
+#             # Verificar si hora_sin_detecciones está dentro del horario de desayuno o almuerzo
+#             en_horario_desayuno = desayuno_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= desayuno_final_segundos
+#             en_horario_almuerzo = almuerzo_inicio_segundos <= hora_sin_detecciones_segundos_almacenado.value <= almuerzo_final_segundos
+
+#             # Si la hora de la primera detección está dentro del rango del desayuno, desactiva el estado de no detección (False)
+#             if desayuno_inicio_segundos <= hora_primera_deteccion_segundos_almacenado.value <= desayuno_final_segundos:
+#                 en_horario_desayuno = False
+#                 # Actualizar la hora de no detección a la nueva hora
+#                 hora_sin_detecciones_segundos_almacenado.value = hora_primera_deteccion_segundos_almacenado.value
+#             else:
+#                 en_horario_desayuno = True    
+
+#             # Similar para el horario de almuerzo
+#             if almuerzo_inicio_segundos <= hora_primera_deteccion_segundos_almacenado.value <= almuerzo_final_segundos:
+#                 en_horario_almuerzo = False
+#                 # Actualizar la hora de no detección a la nueva hora
+#                 hora_sin_detecciones_segundos_almacenado.value = hora_primera_deteccion_segundos_almacenado.value
+#             else:
+#                 en_horario_almuerzo = True
+
+#             # Mostrar información para debug
+#             print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_sin_detecciones_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
+#             print(f"Desayuno: {desayuno_inicio_segundos} ---| {hora_primera_deteccion_segundos_almacenado.value}  |---  {desayuno_final_segundos}, Almuerzo: {almuerzo_inicio_segundos} ---| {hora_primera_deteccion_segundos_almacenado.value} |--- {almuerzo_final_segundos}")
+
+#             print("en horario desayuno: ", en_horario_desayuno)
+#             print("en horario almuerzo: ", en_horario_almuerzo)
+
+#             # Clasificación de tiempos fuera de horarios de alimentación
+#             if not en_horario_desayuno and not en_horario_almuerzo:
+#                 if detectado_persona == False and tiempo_sin_deteccion > 0:
+#                     # Clasificar el tiempo según duración
+#                     print("ahora estoy acá")
+#                     if tiempo_sin_deteccion <= 2 * 60:  # Parada corta
+#                         contador_paradas_cortas += 1
+#                         tiempos_paradas_cortas.append(tiempo_sin_deteccion)
+#                         print(f"Parada corta registrada: {tiempo_sin_deteccion // 60} minutos")
+#                     else:  # Otros NPT
+#                         contador_otros_npt += 1
+#                         tiempos_otros_npt.append(tiempo_sin_deteccion)
+#                         print(f"Otros NPT registrado: {tiempo_sin_deteccion // 60} minutos")
+
+
+# en_horario_desayuno = (desayuno_inicio_segundos + 300) >= hora_sin_detecciones_segundos_almacenado.value >= (desayuno_inicio_segundos - 600) and (desayuno_final_segundos + 60) >= hora_primera_deteccion_segundos_almacenado.value >= (desayuno_final_segundos - 60)
+# en_horario_almuerzo = (almuerzo_inicio_segundos + 300) >= hora_sin_detecciones_segundos_almacenado.value >= (almuerzo_inicio_segundos - 60) and (almuerzo_final_segundos + 60) >= hora_primera_deteccion_segundos_almacenado.value >= (almuerzo_final_segundos - 60)   
+
+# en_horario_desayuno = (desayuno_inicio_segundos + 3600) >= hora_sin_detecciones_segundos_almacenado.value >= (desayuno_inicio_segundos - 60) 
+# en_horario_almuerzo = (almuerzo_inicio_segundos + 60) >= hora_sin_detecciones_segundos_almacenado.value >= (almuerzo_inicio_segundos - 60)    
+
 
 
 def time_to_seconds(t):
